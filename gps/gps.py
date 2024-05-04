@@ -627,7 +627,7 @@ Or maybe a gpsd JSON file.
 """
 
     # module version, would be nice to automate the version
-    __version__ = "3.25.1~dev"
+    __version__ = "2024.5.5"
 
     def __init__(self,
                  device=None,
