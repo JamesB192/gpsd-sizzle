@@ -65,12 +65,14 @@ LOG_RAW2 = 10
 ISGPS_ERRLEVEL_BASE = LOG_RAW
 
 loghook = None
-prep = lambda x : print(repr(x))
+prep = lambda x: print(repr(x))
+
 
 def register_report(reporter):
     """register_report(callback)
 
-    The callback must be a callable object expecting a string parameter."""
+    The callback must be a callable object expecting a string parameter.
+    """
     global loghook
     if not callable(reporter):
         raise TypeError("Not callable")
@@ -86,17 +88,18 @@ class Lexer(object):
     """GPS packet lexer object
 
     Fetch a single packet from a file handle."""
+
     ibuf = ""
-    ibuflen = 0
     ibufptr = 0
     sbufptr = 0
     eof = False
     lextable = [
-        [r"\A([\r\n]+)",            "nl"],
-        [r"\A(#[^\r\n]*[\r\n]+)",   "comment"],
-        [r"\A(\$.+\*..[\r\n]+)",    "nmea"],
-        [r"\A(\$STI,.+[\r\n]+)",    "nmea_nosig"],
-        [r"\A(\xb5b.*)[\r\n]+",     "ubx"]
+        [r"\A([\r\n]+)", "nl"],
+        [r"\A(#[^\r\n]*[\r\n]+)", "comment"],
+        [r"\A(\$.+\*..[\r\n]+)", "nmea"],
+        [r"\A(\!.+\*..[\r\n]+)", "nmea"],  # AIS
+        [r"\A(\xb5b.*)", "ubx"],
+        [r"\A(\$STI,.+[\r\n]+)", "nmea_nosig"],
     ]
 
     def __init__(self):
@@ -105,30 +108,50 @@ class Lexer(object):
     def reset(self):
         """Reset the lexer to ground state."""
         self.ibuf = ""
-        self.ibuflen = 0
         self.ibufptr = 0
         self.sbufptr = 0
         self.eof = False
 
-    def get(self, file_handle):
+    def get(self, file_handle, nest=False):
         """Get a packet from the file handle."""
         red_buffer = os.read(file_handle, 128)
         self.eof = bool(0 == len(red_buffer))
         self.ibuf += misc.polystr(red_buffer)
-        return self.packet_parse()
+        tbuf = self.ibuf
+        if not nest:
+            if ret:
+                return self.packet_parse()
+            if self.eof and not self.ibuf:
+                return [0, INVALID_PACKET, b"", self.sbufptr]
+        else:
+            ret = []
+            while True:
+                ret2 = self.packet.parse()
+                if ret2:
+                    ret.append(ret2)
+                elif ret:
+                    return ret
+                else:
+                    break
+            if self.eof and not self.ibuf:
+                return [0, INVALID_PACKET, b"", self.sbufptr]
+        self.ibuf = tbuf
+        self.ibufptr = 0
+        ret = [
+            len(self.ibuf),
+            INVALID_PACKET,
+            misc.polybytes(self.ibuf),
+            self.sbufptr,
+        ]
+        return [ret] if nest else ret
 
     def packet_parse(self):
         for self.ibufptr in range(len(self.ibuf)):
-            scratch = self.ibuf[self.ibufptr:]
+            scratch = self.ibuf[self.ibufptr :]
             ret = self.next_state(scratch)
             if ret:
                 return ret
-        return (
-            0 if (self.eof and not self.ibuf) else 1,
-            INVALID_PACKET,
-            misc.polybytes(self.ibuf[:1]),
-            self.sbufptr
-        )
+        return None
 
     def next_state(self, scratch):
         for row in self.lextable:
@@ -162,7 +185,9 @@ class Lexer(object):
 
     def bless_ubx(self, length_, scratch):
         prep(scratch)
-        length = struct.unpack("<H", misc.polybytes(scratch[4:6]))[0] + 8
+        length = (
+            struct.unpack("<H", misc.polybytes(scratch[4:6]))[0] + 8
+        )
         if length_ != length:
             prep([length_, length])
         frag = scratch[:length]
@@ -170,33 +195,38 @@ class Lexer(object):
         for char in frag[2:-2]:
             a += ord(char)
             b += a
-            a &= 255 ; b &= 255
-        prep([
-            [a ,b],
-            [ord(frag[-4]), ord(frag[-3])],
-            length,
-            ''.join('%02x' % ord(x) for x in frag),
-        ])
+            a &= 255
+            b &= 255
+        prep(
+            [
+                [a, b],
+                [ord(frag[-4]), ord(frag[-3])],
+                length,
+                "".join("%02x" % ord(x) for x in frag),
+            ]
+        )
         if frag[-2:] == "%c%c" % (a, b):
             return self.accept_bless(length, UBX_PACKET)
         return None
 
     def accept_bless(self, length, typed):
-        self.sbufptr += length + self.ibufptr  # dang gpscat takes counter - length
+        self.sbufptr += (
+            length + self.ibufptr
+        )  # dang gpscat takes counter - length
         ret = [
             length,
             typed,
-            misc.polybytes(self.ibuf[self.ibufptr:][:length]),
-            self.sbufptr
-            ]
-        self.ibuf = self.ibuf[length + self.ibufptr:]
-        self.ibuflen = len(self.ibuf)
+            misc.polybytes(self.ibuf[self.ibufptr :][:length]),
+            self.sbufptr,
+        ]
+        self.ibuf = self.ibuf[length + self.ibufptr :]
         self.ibufptr = 0
         return ret
 
     def reject_bless(self, length):
-        self.sbufptr += length + self.ibufptr  # dang gpscat takes counter - length
-        self.ibuf = self.ibuf[length + self.ibufptr:]
-        self.ibuflen = len(self.ibuf)
+        self.sbufptr += (
+            length + self.ibufptr
+        )  # dang gpscat takes counter - length
+        self.ibuf = self.ibuf[length + self.ibufptr :]
         self.ibufptr = 0
         return None

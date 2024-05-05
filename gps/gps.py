@@ -22,11 +22,11 @@ now live in a different module.
 # Preserve this property!
 from __future__ import absolute_import, print_function, division
 import argparse
-import binascii      # for binascii.hexlify()
-import os            # for file handling in gps_io
-import socket        # for socket.error
-import stat          # for stat.S_ISBLK()
-import sys           # to get script name for nice error/warning messages
+import binascii  # for binascii.hexlify()
+import os  # for file handling in gps_io
+import socket  # for socket.error
+import stat  # for stat.S_ISBLK()
+import sys  # to get script name for nice error/warning messages
 
 from .misc import monotonic, polybytes
 from .client import *
@@ -39,14 +39,14 @@ try:
 except ImportError:
     serial = None  # Defer complaining until we know we need it.
 
-NaN = float('nan')
+NaN = float("nan")
 
-VERB_QUIET = 0   # quiet
-VERB_NONE = 1    # just output requested data and some info
+VERB_QUIET = 0  # quiet
+VERB_NONE = 1  # just output requested data and some info
 VERB_DECODE = 2  # decode all messages
-VERB_INFO = 3    # more info
-VERB_RAW = 4     # raw info
-VERB_PROG = 5    # program trace
+VERB_INFO = 3  # more info
+VERB_RAW = 4  # raw info
+VERB_PROG = 5  # program trace
 
 GNSSID_GPS = 0
 GNSSID_SBAS = 1
@@ -55,14 +55,14 @@ GNSSID_BD = 3
 GNSSID_IMES = 4
 GNSSID_QZSS = 5
 GNSSID_GLO = 6
-GNSSID_IRNSS = 7            # ZED-F9T mapping
+GNSSID_IRNSS = 7  # ZED-F9T mapping
 
 
 def isfinite(f):
     """Check if f is finite."""
     # Python 2 does not think +Inf or -Inf are NaN
     # Python 2 has no easier way to test for Inf
-    return float('-inf') < float(f) < float('inf')
+    return float("-inf") < float(f) < float("inf")
 
 
 # Not required but a good idea if these match the list in include/gps.h
@@ -111,8 +111,16 @@ LOG_SET = 1 << 42
 IMU_SET = 1 << 43
 EOF_SET = 1 << 44
 SET_HIGH_BIT = 44
-UNION_SET = (RTCM2_SET | RTCM3_SET | SUBFRAME_SET | AIS_SET | VERSION_SET |
-             DEVICELIST_SET | ERROR_SET | GST_SET)
+UNION_SET = (
+    RTCM2_SET
+    | RTCM3_SET
+    | SUBFRAME_SET
+    | AIS_SET
+    | VERSION_SET
+    | DEVICELIST_SET
+    | ERROR_SET
+    | GST_SET
+)
 STATUS_UNK = 0
 STATUS_GPS = 1
 STATUS_DGPS = 2
@@ -135,10 +143,10 @@ class gpsfix(object):
 
     def __init__(self):
         """Init class gpsfix."""
-        self.altitude = NaN         # Meters DEPRECATED
-        self.altHAE = NaN           # Meters
-        self.altMSL = NaN           # Meters
-        self.climb = NaN            # Meters per second
+        self.altitude = NaN  # Meters DEPRECATED
+        self.altHAE = NaN  # Meters
+        self.altMSL = NaN  # Meters
+        self.climb = NaN  # Meters per second
         self.datum = ""
         self.dgpsAge = -1
         self.dgpsSta = ""
@@ -160,7 +168,7 @@ class gpsfix(object):
         self.epv = NaN
         self.epx = NaN
         self.epy = NaN
-        self.geoidSep = NaN        # Meters
+        self.geoidSep = NaN  # Meters
         self.latitude = self.longitude = 0.0
         self.magtrack = NaN
         self.magvar = NaN
@@ -168,11 +176,11 @@ class gpsfix(object):
         self.relN = NaN
         self.relE = NaN
         self.relD = NaN
-        self.sep = NaN              # a.k.a. epe
-        self.speed = NaN            # Knots
+        self.sep = NaN  # a.k.a. epe
+        self.speed = NaN  # Knots
         self.status = STATUS_UNK
         self.time = NaN
-        self.track = NaN            # Degrees from true north
+        self.track = NaN  # Degrees from true north
         self.velN = NaN
         self.velE = NaN
         self.velD = NaN
@@ -185,34 +193,39 @@ class gps_io(object):
     1. read only from a file
     2. read/write through a device
     3. read only from a gpsd instance
-"""
+    """
 
-    out = b''
+    out = b""
     ser = None
     input_is_device = False
 
-    def __init__(self, input_file_name=None, read_only=False,
-                 gpsd_host='localhost', gpsd_port=2947,
-                 gpsd_device=None,
-                 input_speed=9600,
-                 verbosity_level=0,
-                 write_requested=True):
+    def __init__(
+        self,
+        input_file_name=None,
+        read_only=False,
+        gpsd_host="localhost",
+        gpsd_port=2947,
+        gpsd_device=None,
+        input_speed=9600,
+        verbosity_level=0,
+        write_requested=True,
+    ):
         """Initialize class.
 
-    Arguments:
-      input_file_name: Name of a device/file to open - None if connection to
-                       gpsd via network
-      read_only: request a read only access (will be set automagically when
-                 a file is used for input)
-      gpsd_host: hostname of host running the gpsd
-      gpsd_port: port of [hostname] running the gpsd
-      gpsd_device: Specify a dedicated device for the gpsd - None for auto
-      input_speed: If input_file_name is a (serial) device this specifies
-                   the speed in baud
-      verbosity_level: Specify the verbosity level (0..5)
-      write_requested: Set to true if a write operation shall be executed
-                       (used for internal sanity checking)
-"""
+        Arguments:
+          input_file_name: Name of a device/file to open - None if connection to
+                           gpsd via network
+          read_only: request a read only access (will be set automagically when
+                     a file is used for input)
+          gpsd_host: hostname of host running the gpsd
+          gpsd_port: port of [hostname] running the gpsd
+          gpsd_device: Specify a dedicated device for the gpsd - None for auto
+          input_speed: If input_file_name is a (serial) device this specifies
+                       the speed in baud
+          verbosity_level: Specify the verbosity level (0..5)
+          write_requested: Set to true if a write operation shall be executed
+                           (used for internal sanity checking)
+        """
 
         self.gpsd_device = gpsd_device
         # Used as an indicator in read if a device, file or network connection
@@ -226,17 +239,26 @@ class gps_io(object):
         self.verbosity_level = verbosity_level
         self.prog_name = os.path.basename(sys.argv[0])
         Serial = serial
-        Serial_v3 = Serial and '3' <= Serial.VERSION.split('.')[0]
+        Serial_v3 = Serial and "3" <= Serial.VERSION.split(".")[0]
         # buffer to hold read data
-        self.out = b''
+        self.out = b""
 
         if VERB_PROG <= verbosity_level:
-            print('gps_io(gpsd_device=%s gpsd_host=%s gpsd_port=%s\n'
-                  '       input_file_name=%s input_speed=%s read_only=%s\n'
-                  '       verbosity_level=%s write_requested=%s)' %
-                  (gpsd_device, gpsd_host, gpsd_port,
-                   input_file_name, input_speed, read_only,
-                   verbosity_level, write_requested))
+            print(
+                "gps_io(gpsd_device=%s gpsd_host=%s gpsd_port=%s\n"
+                "       input_file_name=%s input_speed=%s read_only=%s\n"
+                "       verbosity_level=%s write_requested=%s)"
+                % (
+                    gpsd_device,
+                    gpsd_host,
+                    gpsd_port,
+                    input_file_name,
+                    input_speed,
+                    read_only,
+                    verbosity_level,
+                    write_requested,
+                )
+            )
 
         # open the input: device, file, or gpsd
         if input_file_name is not None:
@@ -244,8 +266,10 @@ class gps_io(object):
             try:
                 mode = os.stat(input_file_name).st_mode
             except OSError:
-                sys.stderr.write('%s: failed to open input file %s\n' %
-                                 (self.prog_name, input_file_name))
+                sys.stderr.write(
+                    "%s: failed to open input file %s\n"
+                    % (self.prog_name, input_file_name)
+                )
                 sys.exit(1)
 
             if stat.S_ISCHR(mode):
@@ -256,44 +280,50 @@ class gps_io(object):
             if write_requested:
                 # check for inconsistend arguments
                 if read_only:
-                    sys.stderr.write('%s: read-only mode, '
-                                     'can not send commands\n' %
-                                     self.prog_name)
+                    sys.stderr.write(
+                        "%s: read-only mode, "
+                        "can not send commands\n" % self.prog_name
+                    )
                     sys.exit(1)
                 # check if a file instead of device was specified
                 if self.input_is_device is False:
-                    sys.stderr.write('%s: input is plain file, '
-                                     'can not send commands\n' %
-                                     self.prog_name)
+                    sys.stderr.write(
+                        "%s: input is plain file, "
+                        "can not send commands\n" % self.prog_name
+                    )
                     sys.exit(1)
 
         else:
             # try to open local/remote gpsd daemon over tcp
             if not self.gpsd_host:
-                self.gpsd_host = 'localhost'
+                self.gpsd_host = "localhost"
             try:
-                self.ser = gpscommon(host=self.gpsd_host,
-                                     input_file_name=input_file_name,
-                                     port=self.gpsd_port,
-                                     verbose=self.verbosity_level)
+                self.ser = gpscommon(
+                    host=self.gpsd_host,
+                    input_file_name=input_file_name,
+                    port=self.gpsd_port,
+                    verbose=self.verbosity_level,
+                )
 
                 # alias self.ser.write() to self.write_gpsd()
                 self.ser.write = self.write_gpsd
 
                 # ask for raw, not rare, data
-                data_out = b'?WATCH={'
+                data_out = b"?WATCH={"
                 if gpsd_device is not None:
                     # add in the requested device
-                    data_out += (b'"device":"' +
-                                 polybytes(gpsd_device) +
-                                 b'",')
+                    data_out += (
+                        b'"device":"' + polybytes(gpsd_device) + b'",'
+                    )
                 data_out += b'"enable":true,"raw":2}\r\n'
                 if VERB_RAW <= verbosity_level:
                     print("sent: ", data_out)
                 self.ser.send(data_out)
             except socket.error as err:
-                sys.stderr.write('%s: failed to connect to gpsd %s\n' %
-                                 (self.prog_name, err))
+                sys.stderr.write(
+                    "%s: failed to connect to gpsd %s\n"
+                    % (self.prog_name, err)
+                )
                 sys.exit(1)
             return
 
@@ -303,8 +333,9 @@ class gps_io(object):
 
             # pyserial Ver 3.0+ changes writeTimeout to write_timeout
             # Using the wrong one causes an error
-            write_timeout_arg = ('write_timeout'
-                                 if Serial_v3 else 'writeTimeout')
+            write_timeout_arg = (
+                "write_timeout" if Serial_v3 else "writeTimeout"
+            )
             try:
                 self.ser = Serial.Serial(
                     baudrate=input_speed,
@@ -318,23 +349,27 @@ class gps_io(object):
                     **{write_timeout_arg: 0.5}
                 )
             except AttributeError:
-                sys.stderr.write('%s: failed to import pyserial\n' %
-                                 self.prog_name)
+                sys.stderr.write(
+                    "%s: failed to import pyserial\n" % self.prog_name
+                )
                 sys.exit(2)
             except Serial.serialutil.SerialException:
                 # this exception happens on bad serial port device name
-                sys.stderr.write('%s: failed to open serial port "%s"\n'
-                                 '%s: Your computer has the serial ports:\n' %
-                                 (self.prog_name, input_file_name,
-                                  self.prog_name))
+                sys.stderr.write(
+                    '%s: failed to open serial port "%s"\n'
+                    "%s: Your computer has the serial ports:\n"
+                    % (self.prog_name, input_file_name, self.prog_name)
+                )
 
                 # print out list of supported ports
                 # FIXME: bad location for an import
                 import serial.tools.list_ports as List_Ports
+
                 ports = List_Ports.comports()
                 for port in ports:
-                    sys.stderr.write("    %s: %s\n" %
-                                     (port.device, port.description))
+                    sys.stderr.write(
+                        "    %s: %s\n" % (port.device, port.description)
+                    )
                 sys.exit(1)
 
             # flush input buffer, discarding all its contents
@@ -345,28 +380,34 @@ class gps_io(object):
         elif input_file_name is not None:
             # Read from a plain file of UBX messages
             try:
-                self.ser = open(input_file_name, 'rb')
+                self.ser = open(input_file_name, "rb")
             except IOError:
-                sys.stderr.write('%s: failed to open input %s\n' %
-                                 (self.prog_name, input_file_name))
+                sys.stderr.write(
+                    "%s: failed to open input %s\n"
+                    % (self.prog_name, input_file_name)
+                )
                 sys.exit(1)
 
-    def read(self, decode_func,
-             input_wait=2.0, expect_statement_identifier=None,
-             raw_fd=None):
+    def read(
+        self,
+        decode_func,
+        input_wait=2.0,
+        expect_statement_identifier=None,
+        raw_fd=None,
+    ):
         """Read from device, until timeout or expected message.
 
-    Arguments:
-       decode_func: callable function that accepts the raw data which
-                    converts it to a human readable format
-       expect_statement_identifier: return only the specified package or
-                                    1 if timeout. None (default) if no
-                                    filtering is requested
-       input_wait: read timeout in seconds. Set to 0 to run forever.
-                   Default: 2 seconds
-       raw: file descriptor like object (has to support the .write method)
-            to dump raw data. None if not used
-"""
+        Arguments:
+           decode_func: callable function that accepts the raw data which
+                        converts it to a human readable format
+           expect_statement_identifier: return only the specified package or
+                                        1 if timeout. None (default) if no
+                                        filtering is requested
+           input_wait: read timeout in seconds. Set to 0 to run forever.
+                       Default: 2 seconds
+           raw: file descriptor like object (has to support the .write method)
+                to dump raw data. None if not used
+        """
 
         # are we expecting a certain message?
         if expect_statement_identifier:
@@ -404,13 +445,14 @@ class gps_io(object):
                             break
                         # TODO: the decoder shall return a some current
                         # statement_identifier # to fill last_statement
-                        #_identifier
+                        # _identifier
                         last_statement_identifier = None
                         #
                         self.out = self.out[consumed:]
-                        if ((expect_statement_identifier and
-                             (expect_statement_identifier ==
-                              last_statement_identifier))):
+                        if expect_statement_identifier and (
+                            expect_statement_identifier
+                            == last_statement_identifier
+                        ):
                             # Got what we were waiting for.  Done?
                             ret_code = 0
 
@@ -441,9 +483,10 @@ class gps_io(object):
                     last_statement_identifier = None
                     #
                     self.out = self.out[consumed:]
-                    if ((expect_statement_identifier and
-                         (expect_statement_identifier ==
-                          last_statement_identifier))):
+                    if expect_statement_identifier and (
+                        expect_statement_identifier
+                        == last_statement_identifier
+                    ):
                         # Got what we were waiting for.  Done?
                         ret_code = 0
             else:
@@ -456,13 +499,15 @@ class gps_io(object):
 
                 rb = bytearray(max_in_mem)
                 rb_view = memoryview(rb)
-                rb_idx = 0     # number of bytes read into buffer
+                rb_idx = 0  # number of bytes read into buffer
 
                 # use self.out to cache between read calls
                 nleftover = len(self.out)
                 if nleftover:
                     if nleftover > max_in_mem:
-                        raise IndexError('Unexpectedly long leftover bytes?')
+                        raise IndexError(
+                            "Unexpectedly long leftover bytes?"
+                        )
                     rb[:nleftover] = self.out
                     rb_idx = nleftover
 
@@ -475,28 +520,33 @@ class gps_io(object):
                     if 0 < nread:
                         if raw_fd is not None:
                             # save newly read part only
-                            raw_fd.write(polybytes(
-                                rb_view[rb_idx:rb_idx+nread:]))
+                            raw_fd.write(
+                                polybytes(
+                                    rb_view[rb_idx : rb_idx + nread :]
+                                )
+                            )
 
                     rb_idx += nread
 
                     consumed_idx = 0
                     while True:
-                        consumed = decode_func(rb_view[consumed_idx:rb_idx])
+                        consumed = decode_func(
+                            rb_view[consumed_idx:rb_idx]
+                        )
                         if 0 >= consumed:
                             break
                         consumed_idx += consumed
 
                     # copy end to front
                     if consumed_idx < rb_idx:
-                        rb_view[:rb_idx-consumed_idx] = \
-                            rb_view[consumed_idx:rb_idx]
+                        rb_view[: rb_idx - consumed_idx] = rb_view[
+                            consumed_idx:rb_idx
+                        ]
                     rb_idx -= consumed_idx
 
                     # if we made no progress, break
                     # either we're done or had a decoding error
-                    if ((0 == nread and
-                         0 == consumed_idx)):
+                    if 0 == nread and 0 == consumed_idx:
                         break
 
                 # store anything leftover to self.out
@@ -505,18 +555,24 @@ class gps_io(object):
         except IOError:
             # This happens on a good device name, but gpsd already running.
             # or if USB device unplugged
-            sys.stderr.write('%s: failed to read %s\n'
-                             '%s: Is gpsd already holding the port?\n'
-                             % (self.prog_name, self.input_file_name,
-                                self.prog_name))
+            sys.stderr.write(
+                "%s: failed to read %s\n"
+                "%s: Is gpsd already holding the port?\n"
+                % (self.prog_name, self.input_file_name, self.prog_name)
+            )
             return 1
 
         if 0 < ret_code:
             # did not see the message we were expecting to see
-            sys.stderr.write('%s: waited %0.2f seconds for, '
-                             'but did not get: %%%s%%\n'
-                             % (self.prog_name, input_wait,
-                                expect_statement_identifier))
+            sys.stderr.write(
+                "%s: waited %0.2f seconds for, "
+                "but did not get: %%%s%%\n"
+                % (
+                    self.prog_name,
+                    input_wait,
+                    expect_statement_identifier,
+                )
+            )
         return ret_code
 
     def write_gpsd(self, data):
@@ -526,16 +582,21 @@ class gps_io(object):
         # Input data is binary, converting to hex doubles its size.
         # Limit binary data to length 255, so hex data length less than 510.
         if 255 < len(data):
-            sys.stderr.write('%s: trying to send %d bytes, max is 255\n'
-                             % (self.prog_name, len(data)))
+            sys.stderr.write(
+                "%s: trying to send %d bytes, max is 255\n"
+                % (self.prog_name, len(data))
+            )
             return 1
 
         if self.gpsd_device is not None:
             # add in the requested device
-            data_out = (b'?DEVICE={"path":"' +
-                        polybytes(self.gpsd_device) + b'",')
+            data_out = (
+                b'?DEVICE={"path":"'
+                + polybytes(self.gpsd_device)
+                + b'",'
+            )
         else:
-            data_out = b'?DEVICE={'
+            data_out = b"?DEVICE={"
 
         # Convert binary data to hex and build the message.
         data_out += b'"hexdata":"' + binascii.hexlify(data) + b'"}\r\n'
@@ -550,6 +611,7 @@ class gpsdata(object):
 
     class satellite(object):
         """Class to hold satellite data."""
+
         def __init__(self, PRN, elevation, azimuth, ss, used=None):
             self.PRN = PRN
             self.elevation = elevation
@@ -559,12 +621,16 @@ class gpsdata(object):
 
         def __repr__(self):
             return "PRN: %3d  E: %3d  Az: %3d  Ss: %3d  Used: %s" % (
-                self.PRN, self.elevation, self.azimuth, self.ss,
-                "ny"[self.used])
+                self.PRN,
+                self.elevation,
+                self.azimuth,
+                self.ss,
+                "ny"[self.used],
+            )
 
     def __init__(self):
         """Initialize all data members."""
-        self.online = 0                 # NZ if GPS on, zero if not
+        self.online = 0  # NZ if GPS on, zero if not
 
         self.valid = 0
         self.fix = gpsfix()
@@ -572,13 +638,13 @@ class gpsdata(object):
         self.status = STATUS_UNK
         self.utc = ""
 
-        self.satellites_used = 0        # Satellites used in last fix
+        self.satellites_used = 0  # Satellites used in last fix
         self.xdop = self.ydop = self.vdop = self.tdop = 0
         self.pdop = self.hdop = self.gdop = 0.0
 
         self.epe = 0.0
 
-        self.satellites = []            # satellite objects in view
+        self.satellites = []  # satellite objects in view
 
         self.gps_id = None
         self.driver_mode = 0
@@ -593,7 +659,10 @@ class gpsdata(object):
 
     def __repr__(self):
         st = "Time:     %s (%s)\n" % (self.utc, self.fix.time)
-        st += "Lat/Lon:  %f %f\n" % (self.fix.latitude, self.fix.longitude)
+        st += "Lat/Lon:  %f %f\n" % (
+            self.fix.latitude,
+            self.fix.longitude,
+        )
         if not isfinite(self.fix.altHAE):
             st += "Altitude HAE: ?\n"
         else:
@@ -607,13 +676,25 @@ class gpsdata(object):
         else:
             st += "Track:    %f\n" % (self.fix.track)
         # FIXME: what about other status values?
-        st += "Status:   STATUS_%s\n" \
-              % ("NO_FIX", "FIX", "DGPS_FIX")[self.status]
-        st += "Mode:     MODE_%s\n" \
-              % ("ZERO", "NO_FIX", "2D", "3D")[self.fix.mode]
-        st += "Quality:  %d p=%2.2f h=%2.2f v=%2.2f t=%2.2f g=%2.2f\n" % \
-              (self.satellites_used, self.pdop, self.hdop, self.vdop,
-               self.tdop, self.gdop)
+        st += (
+            "Status:   STATUS_%s\n"
+            % ("NO_FIX", "FIX", "DGPS_FIX")[self.status]
+        )
+        st += (
+            "Mode:     MODE_%s\n"
+            % ("ZERO", "NO_FIX", "2D", "3D")[self.fix.mode]
+        )
+        st += (
+            "Quality:  %d p=%2.2f h=%2.2f v=%2.2f t=%2.2f g=%2.2f\n"
+            % (
+                self.satellites_used,
+                self.pdop,
+                self.hdop,
+                self.vdop,
+                self.tdop,
+                self.gdop,
+            )
+        )
         st += "Y: %s satellites in view:\n" % len(self.satellites)
         for sat in self.satellites:
             st += "    %r\n" % sat
@@ -623,41 +704,48 @@ class gpsdata(object):
 class gps(gpscommon, gpsdata, gpsjson):
     """Client interface to a running gpsd instance.
 
-Or maybe a gpsd JSON file.
-"""
+    Or maybe a gpsd JSON file.
+    """
 
     # module version, would be nice to automate the version
     __version__ = "2024.5.5"
 
-    def __init__(self,
-                 device=None,
-                 host="127.0.0.1",
-                 input_file_name=None,
-                 mode=0,
-                 port=GPSD_PORT,
-                 reconnect=False,
-                 verbose=0):
+    def __init__(
+        self,
+        device=None,
+        host="127.0.0.1",
+        input_file_name=None,
+        mode=0,
+        port=GPSD_PORT,
+        reconnect=False,
+        verbose=0,
+    ):
         self.activated = None
         self.clock_sec = NaN
         self.clock_nsec = NaN
         self.device = device
         self.input_file_name = input_file_name
-        self.path = ''
+        self.path = ""
         self.precision = 0
         self.real_sec = NaN
         self.real_nsec = NaN
         self.serialmode = "8N1"
         self.verbose = verbose
         if VERB_PROG <= verbose:
-            print('gps(device=%s host=%s port=%s\n'
-                  '    input_file_name=%s verbose=%s)' %
-                  (device, host, port, input_file_name,
-                   verbose))
+            print(
+                "gps(device=%s host=%s port=%s\n"
+                "    input_file_name=%s verbose=%s)"
+                % (device, host, port, input_file_name, verbose)
+            )
 
-        gpscommon.__init__(self, host=host, port=port,
-                           input_file_name=input_file_name,
-                           should_reconnect=reconnect,
-                           verbose=verbose)
+        gpscommon.__init__(
+            self,
+            host=host,
+            port=port,
+            input_file_name=input_file_name,
+            should_reconnect=reconnect,
+            verbose=verbose,
+        )
 
         gpsdata.__init__(self)
         gpsjson.__init__(self, verbose=verbose)
@@ -698,7 +786,9 @@ Or maybe a gpsd JSON file.
                 # self.utc is always iso 8601 string
                 # just copy to fix.time
                 self.fix.time = self.utc
-            self.fix.altitude = default("alt", NaN, ALTITUDE_SET)  # DEPRECATED
+            self.fix.altitude = default(
+                "alt", NaN, ALTITUDE_SET
+            )  # DEPRECATED
             self.fix.altHAE = default("altHAE", NaN, ALTITUDE_SET)
             self.fix.altMSL = default("altMSL", NaN, ALTITUDE_SET)
             self.fix.climb = default("climb", NaN, CLIMB_SET)
@@ -724,17 +814,22 @@ Or maybe a gpsd JSON file.
                 setattr(self, n, default(n, NaN, DOP_SET))
             if "satellites" in self.data.keys():
                 self.satellites = []
-                for sat in self.data['satellites']:
-                    if 'el' not in sat:
-                        sat['el'] = -999
-                    if 'az' not in sat:
-                        sat['az'] = -999
-                    if 'ss' not in sat:
-                        sat['ss'] = -999
-                    self.satellites.append(gps.satellite(PRN=sat['PRN'],
-                                           elevation=sat['el'],
-                                           azimuth=sat['az'], ss=sat['ss'],
-                                           used=sat['used']))
+                for sat in self.data["satellites"]:
+                    if "el" not in sat:
+                        sat["el"] = -999
+                    if "az" not in sat:
+                        sat["az"] = -999
+                    if "ss" not in sat:
+                        sat["ss"] = -999
+                    self.satellites.append(
+                        gps.satellite(
+                            PRN=sat["PRN"],
+                            elevation=sat["el"],
+                            azimuth=sat["az"],
+                            ss=sat["ss"],
+                            used=sat["used"],
+                        )
+                    )
             self.satellites_used = 0
             for sat in self.satellites:
                 if sat.used:
@@ -753,8 +848,8 @@ Or maybe a gpsd JSON file.
     def __next__(self):
         """Python 3 version of next().
 
-This is just a shim over read() to enable implicit iteration.
-Not intended to be used directly, use read() instead."""
+        This is just a shim over read() to enable implicit iteration.
+        Not intended to be used directly, use read() instead."""
         if -1 == self.read():
             raise StopIteration
         if hasattr(self, "data"):
@@ -765,20 +860,22 @@ Not intended to be used directly, use read() instead."""
     def next(self):
         """Python 2 compatibile next().
 
-This is just a shim over read() to enable implicit iteration.
-Not intended to be used directly, use read() instead."""
+        This is just a shim over read() to enable implicit iteration.
+        Not intended to be used directly, use read() instead."""
         return self.__next__()
 
     def read(self):
         """Read and interpret data from a gpsd daemon.
 
-Return: less than zero on error or disconnect
-        Otherwise zero,
-"""
+        Return: less than zero on error or disconnect
+                Otherwise zero,
+        """
         status = gpscommon.read(self)
         if 0 >= status:
             return status
-        if self.response.startswith("{") and self.response.endswith("}\r\n"):
+        if self.response.startswith("{") and self.response.endswith(
+            "}\r\n"
+        ):
             self.unpack(self.response)
             self._oldstyle_shim()
             self.valid |= PACKET_SET
@@ -794,42 +891,44 @@ def is_sbas(prn):
     return 120 <= prn <= 158
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # FIXME:  relative imports break this __main__
-    description = 'gps/gps.py module.'
-    usage = '%(prog)s [OPTIONS] [host [port]]'
-    epilog = ('BSD terms apply: see the file COPYING in the distribution root'
-              ' for details.')
+    description = "gps/gps.py module."
+    usage = "%(prog)s [OPTIONS] [host [port]]"
+    epilog = (
+        "BSD terms apply: see the file COPYING in the distribution root"
+        " for details."
+    )
 
     parser = argparse.ArgumentParser(
         description=description,
         epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        usage=usage)
-    parser.add_argument(
-        '-?',
-        action="help",
-        help='show this help message and exit'
+        usage=usage,
     )
     parser.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbose',
+        "-?", action="help", help="show this help message and exit"
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
         default=0,
-        action='count',
-        help='Verbose. Repeat for more verbosity. [Default %(default)s]',
+        action="count",
+        help="Verbose. Repeat for more verbosity. [Default %(default)s]",
     )
     parser.add_argument(
-        '-V', '--version',
-        action='version',
+        "-V",
+        "--version",
+        action="version",
         version="%(prog)s: Version " + gps_version + "\n",
-        help='Output version to stderr, then exit'
+        help="Output version to stderr, then exit",
     )
     parser.add_argument(
-        'arguments',
-        metavar='[host [port]]',
-        nargs='*',
-        help='[host [port]] Host and port to connec to gpsd on.'
+        "arguments",
+        metavar="[host [port]]",
+        nargs="*",
+        help="[host [port]] Host and port to connec to gpsd on.",
     )
     options = parser.parse_args()
 

@@ -26,7 +26,7 @@ def monotonic():
     This always works
     """
 
-    if hasattr(time, 'monotonic'):
+    if hasattr(time, "monotonic"):
         return time.monotonic()
     # else
     return time.clock()
@@ -34,9 +34,11 @@ def monotonic():
 
 # Determine a single class for testing "stringness"
 try:
-    STR_CLASS = basestring  # Base class for 'str' and 'unicode' in Python 2
+    STR_CLASS = (
+        basestring  # Base class for 'str' and 'unicode' in Python 2
+    )
 except NameError:
-    STR_CLASS = str         # In Python 3, 'str' is the base class
+    STR_CLASS = str  # In Python 3, 'str' is the base class
 
 # We need to be able to handle data which may be a mixture of text and binary
 # data.  The text in this context is known to be limited to US-ASCII, so
@@ -50,9 +52,11 @@ except NameError:
 # of 'latin-1' encoding, we can preserve arbitrary binary data while correctly
 # mapping any actual text to the proper characters.
 
-BINARY_ENCODING = 'latin-1'
+BINARY_ENCODING = "latin-1"
 
-if bytes is str:  # In Python 2 these functions can be null transformations
+if (
+    bytes is str
+):  # In Python 2 these functions can be null transformations
 
     polystr = str
     polybytes = bytes
@@ -95,12 +99,17 @@ else:  # Otherwise we do something real
         # newline="\n" ensures that Python 3 won't mangle line breaks
         # line_buffering=True ensures that interactive command sessions
         # work as expected
-        return io.TextIOWrapper(stream.buffer, encoding=BINARY_ENCODING,
-                                newline="\n", line_buffering=True)
+        return io.TextIOWrapper(
+            stream.buffer,
+            encoding=BINARY_ENCODING,
+            newline="\n",
+            line_buffering=True,
+        )
 
     def get_bytes_stream(stream):
         """Standard input/output bytes buffer function"""
         return stream.buffer
+
 
 # WGS84(G1674) defining parameters
 # https://en.wikipedia.org/wiki/Geodetic_datum
@@ -109,25 +118,25 @@ else:  # Otherwise we do something real
 # http://www.unoosa.org/pdf/icg/2012/template/WGS_84.pdf
 # 8-Jul-2014:
 # ftp://ftp.nga.mil/pub2/gandg/website/wgs84/NGA.STND.0036_1.0.0_WGS84.pdf
-WGS84A = 6378137.0                # equatorial radius (semi-major axis), meters
-WGS84F = 298.257223563            # flattening
-WGS84B = 6356752.314245           # polar radius (semi-minor axis)
+WGS84A = 6378137.0  # equatorial radius (semi-major axis), meters
+WGS84F = 298.257223563  # flattening
+WGS84B = 6356752.314245  # polar radius (semi-minor axis)
 # 1st eccentricity squared = (WGS84A ** 2 + WGS84B **^ 2) / (WGS84A **^ 2)
 # valid 8-Jul-2014:
-WGS84E = 6.694379990141e-3        # 1st eccentricity squared
+WGS84E = 6.694379990141e-3  # 1st eccentricity squared
 # 2nd  eccentricity squared = ((WGS84A **^ 2 - WGS84B **^ 2) / (WGS84B **^ 2)
 # valid 8-Jul-2014:
-WGS84E2 = 6.739496742276e-3       # 2nd eccentricy squared
+WGS84E2 = 6.739496742276e-3  # 2nd eccentricy squared
 # WGS 84 value of the earth's gravitational constant for GPS user
 # GMgpsnav, valid 8-JUl-2014
 # Galileo uses μ = 3.986004418 × 1014 m3/s2
 # GLONASS uses 3.986004418e14 м3/s2
-WGS84GM = 3.9860050e14            # m^3/second^2
+WGS84GM = 3.9860050e14  # m^3/second^2
 # Earth's Angular Velocity, Omega dot e
 # valid 8-Jul-2014:
 # also Galileo
 # GLONASS uses 7.292115x10-5
-WGS84AV = 7.2921151467e-5         # rad/sec
+WGS84AV = 7.2921151467e-5  # rad/sec
 
 # GLONASS
 # ICD_GLONASS_5.1_(2008)_en.pdf
@@ -181,18 +190,22 @@ DEG_2_RAD = 0.0174532925199432957692369076848861271
 # Note: A Texas Foot is ( meters * 3937/1200)
 #       (Texas Natural Resources Code, Subchapter D, Sec 21.071 - 79)
 #       not the same as an international fooot.
-FEET_TO_METERS = 0.3048                   # U.S./British feet to meters, exact
-METERS_TO_FEET = (1 / FEET_TO_METERS)     # Meters to U.S./British feet, exact
-MILES_TO_METERS = 1.609344                # Miles to meters, exact
-METERS_TO_MILES = (1 / MILES_TO_METERS)   # Meters to miles, exact
-FATHOMS_TO_METERS = 1.8288                # Fathoms to meters, exact
-METERS_TO_FATHOMS = (1 / FATHOMS_TO_METERS)  # Meters to fathoms, exact
-KNOTS_TO_MPH = (1852 / 1609.344)          # Knots to miles per hour, exact
-KNOTS_TO_KPH = 1.852                      # Knots to kilometers per hour, exact
-MPS_TO_KPH = 3.6                        # Meters per second to klicks/hr, exact
-KNOTS_TO_MPS = (KNOTS_TO_KPH / MPS_TO_KPH)  # Knots to meters per second, exact
-MPS_TO_MPH = (1 / 0.44704)             # Meters/second to miles per hour, exact
-MPS_TO_KNOTS = (3600.0 / 1852.0)            # Meters per second to knots, exact
+FEET_TO_METERS = 0.3048  # U.S./British feet to meters, exact
+METERS_TO_FEET = (
+    1 / FEET_TO_METERS
+)  # Meters to U.S./British feet, exact
+MILES_TO_METERS = 1.609344  # Miles to meters, exact
+METERS_TO_MILES = 1 / MILES_TO_METERS  # Meters to miles, exact
+FATHOMS_TO_METERS = 1.8288  # Fathoms to meters, exact
+METERS_TO_FATHOMS = 1 / FATHOMS_TO_METERS  # Meters to fathoms, exact
+KNOTS_TO_MPH = 1852 / 1609.344  # Knots to miles per hour, exact
+KNOTS_TO_KPH = 1.852  # Knots to kilometers per hour, exact
+MPS_TO_KPH = 3.6  # Meters per second to klicks/hr, exact
+KNOTS_TO_MPS = (
+    KNOTS_TO_KPH / MPS_TO_KPH
+)  # Knots to meters per second, exact
+MPS_TO_MPH = 1 / 0.44704  # Meters/second to miles per hour, exact
+MPS_TO_KNOTS = 3600.0 / 1852.0  # Meters per second to knots, exact
 
 
 def Deg2Rad(x):
@@ -207,14 +220,14 @@ def Rad2Deg(x):
 
 def lla2ecef(lat, lon, altHAE):
     """Convert Lat, lon (in degrees) and altHAE in meters
-to ECEF x, y and z in meters."""
+    to ECEF x, y and z in meters."""
     # convert degrees to radians
     lat *= DEG_2_RAD
     lon *= DEG_2_RAD
 
     sin_lat = math.sin(lat)
     cos_lat = math.cos(lat)
-    n = WGS84A / math.sqrt(1 - WGS84E * (sin_lat ** 2))
+    n = WGS84A / math.sqrt(1 - WGS84E * (sin_lat**2))
     x = (n + altHAE) * cos_lat * math.cos(lon)
     y = (n + altHAE) * cos_lat * math.sin(lon)
     z = (n * (1 - WGS84E) + altHAE) * sin_lat
@@ -223,23 +236,25 @@ to ECEF x, y and z in meters."""
 
 def ecef2lla(x, y, z):
     """Convert ECEF x, y and z in meters to
-Lat, lon in degrees and altHAE in meters"""
+    Lat, lon in degrees and altHAE in meters"""
 
     longitude = math.atan2(y, x) * RAD_2_DEG
 
-    p = math.sqrt((x ** 2) + (y ** 2))
+    p = math.sqrt((x**2) + (y**2))
     theta = math.atan2(z * WGS84A, p * WGS84B)
     # sadly Python has no sincos()
     sin_theta = math.sin(theta)
     cos_theta = math.cos(theta)
 
-    phi = math.atan2(z + WGS84E2 * WGS84B * (sin_theta ** 3),
-                     p - WGS84E * WGS84A * (cos_theta ** 3))
+    phi = math.atan2(
+        z + WGS84E2 * WGS84B * (sin_theta**3),
+        p - WGS84E * WGS84A * (cos_theta**3),
+    )
     latitude = phi * RAD_2_DEG
     sin_phi = math.sin(phi)
     cos_phi = math.cos(phi)
 
-    n = WGS84A / math.sqrt(1.0 - WGS84E * (sin_phi ** 2))
+    n = WGS84A / math.sqrt(1.0 - WGS84E * (sin_phi**2))
 
     # altitude is WGS84
     altHAE = (p / cos_phi) - n
@@ -250,15 +265,15 @@ Lat, lon in degrees and altHAE in meters"""
 # FIXME: needs tests
 def ecef2enu(x, y, z, lat, lon, altHAE):
     """Calculate ENU from lat/lon/altHAE to ECEF
-ECEF in meters, lat/lon in degrees, altHAE in meters.
-Returns ENU in meters"""
+    ECEF in meters, lat/lon in degrees, altHAE in meters.
+    Returns ENU in meters"""
 
     #  Grr, lambda is a reserved name in Python...
     lambd = lat * DEG_2_RAD
     phi = lon * DEG_2_RAD
     sin_lambd = math.sin(lambd)
     cos_lambd = math.cos(lambd)
-    n = WGS84A / math.sqrt(1 - WGS84E * sin_lambd ** 2)
+    n = WGS84A / math.sqrt(1 - WGS84E * sin_lambd**2)
 
     sin_phi = math.sin(phi)
     cos_phi = math.cos(phi)
@@ -273,8 +288,16 @@ Returns ENU in meters"""
     zd = z - z0
 
     E = -sin_phi * xd + cos_phi * yd
-    N = -cos_phi * sin_lambd * xd - sin_lambd * sin_phi * yd + cos_lambd * zd
-    U = cos_phi * cos_lambd * xd + cos_lambd * sin_phi * yd + sin_lambd * zd
+    N = (
+        -cos_phi * sin_lambd * xd
+        - sin_lambd * sin_phi * yd
+        + cos_lambd * zd
+    )
+    U = (
+        cos_phi * cos_lambd * xd
+        + cos_lambd * sin_phi * yd
+        + sin_lambd * zd
+    )
 
     return E, N, U
 
@@ -282,7 +305,8 @@ Returns ENU in meters"""
 # FIXME:  needs tests.
 def enu2aer(E, N, U):
     """Convert ENU to Azimuth, Elevation and Range.
-ENU is in meters. Returns Azimuth and Elevation in degrees, range in meters"""
+    ENU is in meters. Returns Azimuth and Elevation in degrees, range in meters
+    """
 
     enr = math.hypot(E, N)
     rng = math.hypot(enr, U)
@@ -295,8 +319,8 @@ ENU is in meters. Returns Azimuth and Elevation in degrees, range in meters"""
 # FIXME: needs tests
 def ecef2aer(x, y, z, lat, lon, altHAE):
     """Calculate az, el and range to ECEF from lat/lon/altHAE.
-ECEF in meters, lat/lon in degrees, altHAE in meters.
-Returns Azimuth and Elevation in degrees, range in meters"""
+    ECEF in meters, lat/lon in degrees, altHAE in meters.
+    Returns Azimuth and Elevation in degrees, range in meters"""
 
     (E, N, U) = ecef2enu(x, y, z, lat, lon, altHAE)
     return enu2aer(E, N, U)
@@ -324,11 +348,11 @@ def CalcRad(lat):
     # es2 = 0.00673949674227643
     sc = math.sin(math.radians(lat))
     x = (WGS84A / 1000) * (1.0 - WGS84E)
-    z = 1.0 - WGS84E * (sc ** 2)
+    z = 1.0 - WGS84E * (sc**2)
     y = pow(z, 1.5)
     r = x / y
 
-    r = r * 1000.0      # Convert to meters
+    r = r * 1000.0  # Convert to meters
     return r
 
 
@@ -369,23 +393,28 @@ def EarthDistance(c1, c2):
     for _ in range(MAX_ITERATIONS):
         sinLambda = math.sin(Lambda)
         cosLambda = math.cos(Lambda)
-        sinSigma = math.sqrt((cosU2 * sinLambda) ** 2 +
-                             (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) ** 2)
+        sinSigma = math.sqrt(
+            (cosU2 * sinLambda) ** 2
+            + (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) ** 2
+        )
         if 0 == sinSigma:
             return 0.0  # coincident points
         cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda
         sigma = math.atan2(sinSigma, cosSigma)
         sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma
-        cosSqAlpha = 1 - sinAlpha ** 2
+        cosSqAlpha = 1 - sinAlpha**2
         try:
             cos2SigmaM = cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha
         except ZeroDivisionError:
             cos2SigmaM = 0
         C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha))
         LambdaPrev = Lambda
-        Lambda = L + (1 - C) * f * sinAlpha * (sigma + C * sinSigma *
-                                               (cos2SigmaM + C * cosSigma *
-                                                (-1 + 2 * cos2SigmaM ** 2)))
+        Lambda = L + (1 - C) * f * sinAlpha * (
+            sigma
+            + C
+            * sinSigma
+            * (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM**2))
+        )
         if CONVERGENCE_THRESHOLD > abs(Lambda - LambdaPrev):
             break  # successful convergence
     else:
@@ -393,12 +422,28 @@ def EarthDistance(c1, c2):
         # fall back top EarthDistanceSmall
         return EarthDistanceSmall(c1, c2)
 
-    uSq = cosSqAlpha * (a ** 2 - b ** 2) / (b ** 2)
-    A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)))
+    uSq = cosSqAlpha * (a**2 - b**2) / (b**2)
+    A = 1 + uSq / 16384 * (
+        4096 + uSq * (-768 + uSq * (320 - 175 * uSq))
+    )
     B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)))
-    deltaSigma = B * sinSigma * (cos2SigmaM + B / 4 * (
-        cosSigma * (-1 + 2 * cos2SigmaM ** 2) - B / 6 * cos2SigmaM *
-        (-3 + 4 * sinSigma ** 2) * (-3 + 4 * cos2SigmaM ** 2)))
+    deltaSigma = (
+        B
+        * sinSigma
+        * (
+            cos2SigmaM
+            + B
+            / 4
+            * (
+                cosSigma * (-1 + 2 * cos2SigmaM**2)
+                - B
+                / 6
+                * cos2SigmaM
+                * (-3 + 4 * sinSigma**2)
+                * (-3 + 4 * cos2SigmaM**2)
+            )
+        )
+    )
     s = b * A * (sigma - deltaSigma)
 
     # return meters to 6 decimal places
@@ -413,12 +458,15 @@ def EarthDistanceSmall(c1, c2):
     (lat1, lon1) = c1
     (lat2, lon2) = c2
     avglat = (lat1 + lat2) / 2
-    phi = math.radians(avglat)    # radians of avg latitude
+    phi = math.radians(avglat)  # radians of avg latitude
     # meters per degree at this latitude, corrected for WGS84 ellipsoid
     # Note the wikipedia numbers are NOT ellipsoid corrected:
     # https://en.wikipedia.org/wiki/Decimal_degrees#Precision
-    m_per_d = (111132.954 - 559.822 * math.cos(2 * phi) +
-               1.175 * math.cos(4 * phi))
+    m_per_d = (
+        111132.954
+        - 559.822 * math.cos(2 * phi)
+        + 1.175 * math.cos(4 * phi)
+    )
     dlat = (lat1 - lat2) * m_per_d
     dlon = (lon1 - lon2) * m_per_d * math.cos(phi)
 
@@ -460,7 +508,8 @@ def isotime(s):
             msec = "0"
         # Note: no leap-second correction!
         return calendar.timegm(
-            time.strptime(date, "%Y-%m-%dT%H:%M:%S")) + float("0." + msec)
+            time.strptime(date, "%Y-%m-%dT%H:%M:%S")
+        ) + float("0." + msec)
 
     # else:
     raise TypeError
@@ -469,8 +518,8 @@ def isotime(s):
 def posix2gps(posix, leapseconds):
     """Convert POSIX time in seconds,  using leapseconds, to gps time.
 
-Return (gps_time, gps_week, gps_tow)
-"""
+    Return (gps_time, gps_week, gps_tow)
+    """
 
     # GPS Epoch starts: Jan 1980 00:00:00 UTC, POSIX/Unix time: 315964800
     gps_time = posix - 315964800

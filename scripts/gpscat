@@ -27,14 +27,17 @@ try:
     from gps.misc import BINARY_ENCODING
 except ImportError as e:
     sys.stderr.write(
-        "gpscat: can't load Python gps libraries -- check PYTHONPATH.\n")
+        "gpscat: can't load Python gps libraries -- check PYTHONPATH.\n"
+    )
     sys.stderr.write("%s\n" % e)
     sys.exit(1)
 
-gps_version = '2024.5.5'
+gps_version = "2024.5.5"
 if gps.__version__ != gps_version:
-    sys.stderr.write("gpscat: ERROR: need gps module version %s, got %s\n" %
-                     (gps_version, gps.__version__))
+    sys.stderr.write(
+        "gpscat: ERROR: need gps module version %s, got %s\n"
+        % (gps_version, gps.__version__)
+    )
     sys.exit(1)
 
 
@@ -53,7 +56,9 @@ PRINTABLE = set(bytearray(string.printable, encoding=BINARY_ENCODING))
 def hexdump(st):
     """Convert string to hex string."""
     dmp = ""
-    for ch in bytearray(st):  # bytearray gets array of ints in Python 2 and 3
+    for ch in bytearray(
+        st
+    ):  # bytearray gets array of ints in Python 2 and 3
         if ch in PRINTABLE:
             dmp += chr(ch)
         else:
@@ -67,55 +72,61 @@ def reporter(errlevel, mesg):
         sys.stdout.write(mesg)
 
 
-if __name__ == '__main__':
-    usage = '%(prog)s [OPTIONS]'
-    epilog = ('BSD terms apply: see the file COPYING in the distribution root'
-              ' for details.')
+if __name__ == "__main__":
+    usage = "%(prog)s [OPTIONS]"
+    epilog = (
+        "BSD terms apply: see the file COPYING in the distribution root"
+        " for details."
+    )
 
     parser = argparse.ArgumentParser(usage=usage, epilog=epilog)
     parser.add_argument(
-        '-?',
-        action="help",
-        help='show this help message and exit'
+        "-?", action="help", help="show this help message and exit"
     )
     parser.add_argument(
-        '-D',
-        '--debug',
-        dest='debug',
+        "-D",
+        "--debug",
+        dest="debug",
         default=0,
         type=int,
-        help='Set level of debug. Must be integer. [Default %(default)s]',
+        help="Set level of debug. Must be integer. [Default %(default)s]",
     )
     parser.add_argument(
-        '-p', '--packetizer',
-        action='store_true',
-        dest='packetizer',
+        "-p",
+        "--packetizer",
+        action="store_true",
+        dest="packetizer",
         default=False,
         help="Set packetizer mode",
     )
     parser.add_argument(
-        '-s', '--speed',
-        dest='speed_str',
+        "-s",
+        "--speed",
+        dest="speed_str",
         default=None,
-        help=('Set port speed. '
-              ' Optionally parity (N, O, E) and stop bits (1, 2)'),
+        help=(
+            "Set port speed. "
+            " Optionally parity (N, O, E) and stop bits (1, 2)"
+        ),
     )
     parser.add_argument(
-        '-t', '--typeflag',
-        action='store_true',
-        dest='typeflag',
+        "-t",
+        "--typeflag",
+        action="store_true",
+        dest="typeflag",
         default=False,
         help="Select packetizer mode with type and length",
     )
     parser.add_argument(
-        '-V', '--version',
-        action='version',
+        "-V",
+        "--version",
+        action="version",
         version="%(prog)s: Version " + gps_version + "\n",
-        help='Output version to stderr, then exit',
+        help="Output version to stderr, then exit",
     )
     parser.add_argument(
-        'target',
-        help='File or Serial port to read from',
+        "target",
+        help="File or Serial port to read from",
     )
 
     options = parser.parse_args()
@@ -124,7 +135,7 @@ if __name__ == '__main__':
     options.parity = None
     options.stopbits = None
     if options.speed_str:
-        if options.speed_str[-2] in ('N', 'E', 'O'):
+        if options.speed_str[-2] in ("N", "E", "O"):
             options.parity = options.speed_str[-2]
             options.stopbits = int(options.speed_str[-1])
             options.speed_str = options.speed_str[:-2]
@@ -138,40 +149,50 @@ if __name__ == '__main__':
         options.rawmode = True
 
     try:
-        if "rfcomm" in options.target:     # Bluetooth special case
-            s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM,
-                              socket.BTPROTO_RFCOMM)
+        if "rfcomm" in options.target:  # Bluetooth special case
+            s = socket.socket(
+                socket.AF_BLUETOOTH,
+                socket.SOCK_STREAM,
+                socket.BTPROTO_RFCOMM,
+            )
             s.connect((options.target, 1))
             tty = s.fileno()
-        else:                            # Ordinary device
+        else:  # Ordinary device
             tty = os.open(options.target, os.O_RDONLY)
 
         if options.speed is not None:
-            (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = \
+            (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = (
                 termios.tcgetattr(tty)
+            )
             try:
                 ispeed = ospeed = eval("termios.B%d" % options.speed)
             except AttributeError:
-                sys.stderr.write("gpscat: unknown baud rate %d\n" %
-                                 options.speed)
+                sys.stderr.write(
+                    "gpscat: unknown baud rate %d\n" % options.speed
+                )
                 raise SystemExit(1)
             if options.stopbits:
                 cflag &= ~termios.CSIZE
-                cflag |= (termios.CS8, termios.CS7)[options.stopbits - 1]
+                cflag |= (termios.CS8, termios.CS7)[
+                    options.stopbits - 1
+                ]
             if options.parity:
-                if 'N' == options.parity:
+                if "N" == options.parity:
                     iflag &= ~termios.PARENB
                     iflag &= ~termios.INPCK
-                elif 'O' == options.parity:
+                elif "O" == options.parity:
                     iflag |= termios.INPCK
                     cflag |= termios.PARENB
                     cflag |= termios.PARODD
-                elif 'E' == options.parity:
+                elif "E" == options.parity:
                     iflag |= termios.INPCK
                     cflag |= termios.PARENB
                     cflag &= ~termios.PARODD
-            termios.tcsetattr(tty, termios.TCSANOW,
-                              [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
+            termios.tcsetattr(
+                tty,
+                termios.TCSANOW,
+                [iflag, oflag, cflag, lflag, ispeed, ospeed, cc],
+            )
 
         if not options.rawmode:
             getter = sniffer.new()
@@ -191,8 +212,15 @@ if __name__ == '__main__':
                     if 0 == length:
                         break
                     if options.typeflag:
-                        sys.stdout.write('%d (%d@%d): %s\n' % (ptype, length,
-                                         counter - length, hexdump(packet)))
+                        sys.stdout.write(
+                            "%d (%d@%d): %s\n"
+                            % (
+                                ptype,
+                                length,
+                                counter - length,
+                                hexdump(packet),
+                            )
+                        )
                     else:
                         sys.stdout.write(hexdump(packet) + "\n")
     except KeyboardInterrupt:

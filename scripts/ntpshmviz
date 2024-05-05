@@ -25,14 +25,17 @@ from __future__ import absolute_import, print_function, division
 
 import argparse
 import sys
+
 try:
     import matplotlib.pyplot as PLT
 except ImportError:
-    print("Please make sure matplotlib is installed properly:",
-          sys.exc_info()[0])
+    print(
+        "Please make sure matplotlib is installed properly:",
+        sys.exc_info()[0],
+    )
     sys.exit(1)
 
-gps_version = '2024.5.5'
+gps_version = "2024.5.5"
 ns_per_s = 1e9
 
 
@@ -50,8 +53,10 @@ class ntpOffset(object):
     def display(self):
         """Display the graphs."""
         # Alert the user that closing the graphs can be done with "Ctrl-w"
-        print("Please note that the graph can be closed with the "
-              "key combination of <Ctrl-w>")
+        print(
+            "Please note that the graph can be closed with the "
+            "key combination of <Ctrl-w>"
+        )
 
         PLT.figure()
         subplot_value = 211
@@ -60,11 +65,11 @@ class ntpOffset(object):
             PLT.subplot(subplot_value)
             # setup and create the vlines graph
             t = range(0, self.line_counts[ntp_item], 1)
-            PLT.vlines(t, 0, self.ntp_data[ntp_item], color='r')
+            PLT.vlines(t, 0, self.ntp_data[ntp_item], color="r")
             # add labels
             PLT.title("NTP drift for " + ntp_item)
-            PLT.xlabel('sample')
-            PLT.ylabel('drift')
+            PLT.xlabel("sample")
+            PLT.ylabel("drift")
             # increment the subplot by 1.
             # this allows for each data group to have it's own graph
             subplot_value += 1
@@ -86,25 +91,29 @@ class ntpOffset(object):
         #   - Leep-second notification status
         #   - Source precision (log(2) of source jitter)
 
-        self.ntp_data = {}      # data sets for each ntp unit
-        self.line_counts = {}   # Count of total lines for each ntp unit
-        record = []             # A single record in the file or data stream
-        offset = 0              # offset value to add to the array
-        self.lines = 0          # width of graph
+        self.ntp_data = {}  # data sets for each ntp unit
+        self.line_counts = {}  # Count of total lines for each ntp unit
+        record = []  # A single record in the file or data stream
+        offset = 0  # offset value to add to the array
+        self.lines = 0  # width of graph
 
         for line in stream:
             line = line.lstrip()
             record = line.split()
-            if len(record) > 6 and line[0] != '#':
+            if len(record) > 6 and line[0] != "#":
                 try:
-                    then = record[3].split('.')
-                    nows = record[4].split('.')
+                    then = record[3].split(".")
+                    nows = record[4].split(".")
                     offset = (int(then[0]) - int(nows[0])) * ns_per_s
-                    offset += (int(then[1]) - int(nows[1]))
+                    offset += int(then[1]) - int(nows[1])
                     offset /= float(ns_per_s)
                 except Exception:
-                    print("Invalid data: ", sys.exc_info()[0],
-                          ". Data was: ", line)
+                    print(
+                        "Invalid data: ",
+                        sys.exc_info()[0],
+                        ". Data was: ",
+                        line,
+                    )
                     continue
 
                 # If the NTP unit is in the dictionary
@@ -122,11 +131,14 @@ class ntpOffset(object):
 
 def args():
     """Handle command line args."""
-    parser = argparse.ArgumentParser(description='NTP drift visualizer')
-    parser.add_argument('-V', '--version',
-                        action='version',
-                        help='Get version of GPS project',
-                        version="ntpshmviz: version"+str(gps_version))
+    parser = argparse.ArgumentParser(description="NTP drift visualizer")
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        help="Get version of GPS project",
+        version="ntpshmviz: version" + str(gps_version),
+    )
     return parser.parse_args()
 
 

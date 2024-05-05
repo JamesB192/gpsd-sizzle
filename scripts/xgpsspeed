@@ -34,7 +34,8 @@ import sys
 # pylint to complain about the subsequent "non-top" imports.
 try:
     import gi
-    gi.require_version('Gtk', '3.0')
+
+    gi.require_version("Gtk", "3.0")
 
 except ImportError as err:
     # ModuleNotFoundError needs Python 3.6
@@ -47,10 +48,12 @@ except ValueError as err:
     sys.exit(1)
 
 
-from gi.repository import Gtk        # pylint: disable=wrong-import-position
-from gi.repository import Gdk        # pylint: disable=wrong-import-position
-from gi.repository import GdkPixbuf  # pylint: disable=wrong-import-position
-from gi.repository import GLib       # pylint: disable=wrong-import-position
+from gi.repository import Gtk  # pylint: disable=wrong-import-position
+from gi.repository import Gdk  # pylint: disable=wrong-import-position
+from gi.repository import (
+    GdkPixbuf,
+)  # pylint: disable=wrong-import-position
+from gi.repository import GLib  # pylint: disable=wrong-import-position
 
 # pylint wants local modules last
 try:
@@ -58,14 +61,17 @@ try:
     import gps.clienthelpers
 except ImportError as e:
     sys.stderr.write(
-        "xgpsspeed: can't load Python gps libraries -- check PYTHONPATH.\n")
+        "xgpsspeed: can't load Python gps libraries -- check PYTHONPATH.\n"
+    )
     sys.stderr.write("%s\n" % e)
     sys.exit(1)
 
-gps_version = '2024.5.5'
+gps_version = "2024.5.5"
 if gps.__version__ != gps_version:
-    sys.stderr.write("xgpsspeed: ERROR: need gps module version %s, got %s\n" %
-                     (gps_version, gps.__version__))
+    sys.stderr.write(
+        "xgpsspeed: ERROR: need gps module version %s, got %s\n"
+        % (gps_version, gps.__version__)
+    )
     sys.exit(1)
 
 
@@ -75,19 +81,18 @@ class Speedometer(Gtk.DrawingArea):
     def __init__(self, speed_unit=None):
         """Init Speedometer class."""
         Gtk.DrawingArea.__init__(self)
-        self.MPH_UNIT_LABEL = 'mph'
-        self.KPH_UNIT_LABEL = 'km/h'
-        self.KNOTS_UNIT_LABEL = 'knots'
+        self.MPH_UNIT_LABEL = "mph"
+        self.KPH_UNIT_LABEL = "km/h"
+        self.KNOTS_UNIT_LABEL = "knots"
         self.conversions = {
             self.MPH_UNIT_LABEL: gps.MPS_TO_MPH,
             self.KPH_UNIT_LABEL: gps.MPS_TO_KPH,
-            self.KNOTS_UNIT_LABEL: gps.MPS_TO_KNOTS
+            self.KNOTS_UNIT_LABEL: gps.MPS_TO_KNOTS,
         }
         self.speed_unit = speed_unit or self.MPH_UNIT_LABEL
         if self.speed_unit not in self.conversions:
             raise TypeError(
-                '%s is not a valid speed unit'
-                % (repr(speed_unit))
+                "%s is not a valid speed unit" % (repr(speed_unit))
             )
 
 
@@ -97,8 +102,8 @@ class LandSpeedometer(Speedometer):
     def __init__(self, speed_unit=None):
         """Init LandSpeedometer class."""
         Speedometer.__init__(self, speed_unit)
-        self.connect('draw', self.draw_s)
-        self.connect('size-allocate', self.on_size_allocate)
+        self.connect("draw", self.draw_s)
+        self.connect("size-allocate", self.on_size_allocate)
         self.cr = None
         self.last_speed = 0
         self.long_inset = lambda x: 0.1 * x
@@ -115,7 +120,7 @@ class LandSpeedometer(Speedometer):
             -1: 70,
             0: 80,
             1: 90,
-            2: 100
+            2: 100,
         }
         self.res_div = 10.0
         self.res_div_mul = 1
@@ -165,16 +170,22 @@ class LandSpeedometer(Speedometer):
         for i in self.long_ticks:
             self.cr.move_to(
                 x + (radius - long_inset) * cos(i * pi / 6.0),
-                y + (radius - long_inset) * sin(i * pi / 6.0)
+                y + (radius - long_inset) * sin(i * pi / 6.0),
             )
             self.cr.line_to(
-                (x + (radius + (self.cr.get_line_width() / 2)) *
-                 cos(i * pi / 6.0)),
-                (y + (radius + (self.cr.get_line_width() / 2)) *
-                 sin(i * pi / 6.0))
+                (
+                    x
+                    + (radius + (self.cr.get_line_width() / 2))
+                    * cos(i * pi / 6.0)
+                ),
+                (
+                    y
+                    + (radius + (self.cr.get_line_width() / 2))
+                    * sin(i * pi / 6.0)
+                ),
             )
             self.cr.select_font_face(
-                'Georgia',
+                "Georgia",
                 cairo.FONT_SLANT_NORMAL,
             )
             self.cr.set_font_size(radius / 10)
@@ -186,62 +197,93 @@ class LandSpeedometer(Speedometer):
                 t_width,
                 t_height,
                 _x_advance,
-                _y_advance
+                _y_advance,
             ) = self.cr.text_extents(_num)
 
             if i in (-8, -7, -6, -5, -4):
                 self.cr.move_to(
-                    (x + (radius - long_inset - (t_width / 2)) *
-                     cos(i * pi / 6.0)),
-                    (y + (radius - long_inset - (t_height * 2)) *
-                     sin(i * pi / 6.0))
+                    (
+                        x
+                        + (radius - long_inset - (t_width / 2))
+                        * cos(i * pi / 6.0)
+                    ),
+                    (
+                        y
+                        + (radius - long_inset - (t_height * 2))
+                        * sin(i * pi / 6.0)
+                    ),
                 )
             elif i in (-2, -1, 0, 2, 1):
                 self.cr.move_to(
-                    (x + (radius - long_inset - (t_width * 1.5)) *
-                     cos(i * pi / 6.0)),
-                    (y + (radius - long_inset - (t_height * 2)) *
-                     sin(i * pi / 6.0))
+                    (
+                        x
+                        + (radius - long_inset - (t_width * 1.5))
+                        * cos(i * pi / 6.0)
+                    ),
+                    (
+                        y
+                        + (radius - long_inset - (t_height * 2))
+                        * sin(i * pi / 6.0)
+                    ),
                 )
             elif i in (-3,):
                 self.cr.move_to(
                     (x - t_width / 2),
-                    (y - radius + self.long_inset(radius) * 2 + t_height)
+                    (
+                        y
+                        - radius
+                        + self.long_inset(radius) * 2
+                        + t_height
+                    ),
                 )
             self.cr.show_text(_num)
             self.cr.restore()
 
             if i != self.long_ticks[0]:
                 self.cr.move_to(
-                    x + (radius - middle_inset) * cos((i + 0.5) * pi / 6.0),
-                    y + (radius - middle_inset) * sin((i + 0.5) * pi / 6.0)
+                    x
+                    + (radius - middle_inset)
+                    * cos((i + 0.5) * pi / 6.0),
+                    y
+                    + (radius - middle_inset)
+                    * sin((i + 0.5) * pi / 6.0),
                 )
                 self.cr.line_to(
-                    x + (radius + (self.cr.get_line_width() / 2)) *
-                    cos((i + 0.5) * pi / 6.0),
-                    y + (radius + (self.cr.get_line_width() / 2)) *
-                    sin((i + 0.5) * pi / 6.0)
+                    x
+                    + (radius + (self.cr.get_line_width() / 2))
+                    * cos((i + 0.5) * pi / 6.0),
+                    y
+                    + (radius + (self.cr.get_line_width() / 2))
+                    * sin((i + 0.5) * pi / 6.0),
                 )
 
             for z in self.short_ticks:
                 w_half = self.cr.get_line_width() / 2
                 if 0 > i:
                     self.cr.move_to(
-                        x + (radius - short_inset) * cos((i + z) * pi / 6.0),
-                        y + (radius - short_inset) * sin((i + z) * pi / 6.0)
+                        x
+                        + (radius - short_inset)
+                        * cos((i + z) * pi / 6.0),
+                        y
+                        + (radius - short_inset)
+                        * sin((i + z) * pi / 6.0),
                     )
                     self.cr.line_to(
                         x + (radius + w_half) * cos((i + z) * pi / 6.0),
-                        y + (radius + w_half) * sin((i + z) * pi / 6.0)
+                        y + (radius + w_half) * sin((i + z) * pi / 6.0),
                     )
                 else:
                     self.cr.move_to(
-                        x + (radius - short_inset) * cos((i - z) * pi / 6.0),
-                        y + (radius - short_inset) * sin((i - z) * pi / 6.0)
+                        x
+                        + (radius - short_inset)
+                        * cos((i - z) * pi / 6.0),
+                        y
+                        + (radius - short_inset)
+                        * sin((i - z) * pi / 6.0),
                     )
                     self.cr.line_to(
                         x + (radius + w_half) * cos((i - z) * pi / 6.0),
-                        y + (radius + w_half) * sin((i - z) * pi / 6.0)
+                        y + (radius + w_half) * sin((i - z) * pi / 6.0),
                     )
             self.cr.stroke()
 
@@ -259,7 +301,7 @@ class LandSpeedometer(Speedometer):
         self.cr.move_to(x, y)
         self.cr.line_to(
             x + (radius - (2 * inset)) * cos(actual * pi / 6.0),
-            y + (radius - (2 * inset)) * sin(actual * pi / 6.0)
+            y + (radius - (2 * inset)) * sin(actual * pi / 6.0),
         )
         self.cr.stroke()
         self.cr.restore()
@@ -267,27 +309,29 @@ class LandSpeedometer(Speedometer):
     def draw_speed_text(self, speed, radius, x, y):
         """draw_speed_text."""
         self.cr.save()
-        speed = '%.2f %s' % (
-                speed * self.conversions.get(self.speed_unit),
-                self.speed_unit
+        speed = "%.2f %s" % (
+            speed * self.conversions.get(self.speed_unit),
+            self.speed_unit,
         )
         self.cr.select_font_face(
-            'Georgia',
+            "Georgia",
             cairo.FONT_SLANT_NORMAL,
             # cairo.FONT_WEIGHT_BOLD
         )
         self.cr.set_font_size(radius / 10)
-        _x_bearing, _y_bearing, t_width, _t_height = \
+        _x_bearing, _y_bearing, t_width, _t_height = (
             self.cr.text_extents(speed)[:4]
-        self.cr.move_to((x - t_width / 2),
-                        (y + radius) - self.long_inset(radius))
+        )
+        self.cr.move_to(
+            (x - t_width / 2), (y + radius) - self.long_inset(radius)
+        )
         self.cr.show_text(speed)
         self.cr.restore()
 
     def get_x_y(self):
         """Get_x_y."""
         rect = self.get_allocation()
-        x = (rect.x + rect.width / 2.0)
+        x = rect.x + rect.width / 2.0
         y = (rect.y + rect.height / 2.0) - 20
         return x, y
 
@@ -298,15 +342,16 @@ class LandSpeedometer(Speedometer):
 
 class NauticalSpeedometer(Speedometer):
     """NauticalSpeedometer class."""
+
     HEADING_SAT_GAP = 0.8
     SAT_SIZE = 10  # radius of the satellite circle in skyview
 
     def __init__(self, speed_unit=None, maxspeed=100, rotate=0.0):
         """Init class NauticalSpeedometer."""
         Speedometer.__init__(self, speed_unit)
-        self.connect('size-allocate', self.on_size_allocate)
+        self.connect("size-allocate", self.on_size_allocate)
         self.width = self.height = 0
-        self.connect('draw', self.draw_s)
+        self.connect("draw", self.draw_s)
         self.long_inset = lambda x: 0.05 * x
         self.mid_inset = lambda x: self.long_inset(x) / 1.5
         self.short_inset = lambda x: self.long_inset(x) / 3
@@ -320,14 +365,17 @@ class NauticalSpeedometer(Speedometer):
     def polar2xy(self, radius, angle, polex, poley):
         """convert Polar coordinate to Cartesian coordinate system.
 
-The y axis in pygtk points downward
-Args:
-   radius:
-   angle: azimuth from from Polar coordinate system, in radian
-   polex and poley are the Cartesian coordinate of the pole
-return a tuple contains (x, y)
-"""
-        return (polex + cos(angle) * radius, poley - sin(angle) * radius)
+        The y axis in pygtk points downward
+        Args:
+           radius:
+           angle: azimuth from from Polar coordinate system, in radian
+           polex and poley are the Cartesian coordinate of the pole
+        return a tuple contains (x, y)
+        """
+        return (
+            polex + cos(angle) * radius,
+            poley - sin(angle) * radius,
+        )
 
     def polar2xyr(self, radius, angle, polex, poley):
         """Version of polar2xy that includes rotation."""
@@ -355,8 +403,9 @@ return a tuple contains (x, y)
         self.draw_arc_and_ticks(width, height, radius, x, y)
         self.draw_heading(20, self.last_heading, radius, x, y)
         for sat in self.satellites:
-            self.draw_sat(sat, radius * NauticalSpeedometer.HEADING_SAT_GAP,
-                          x, y)
+            self.draw_sat(
+                sat, radius * NauticalSpeedometer.HEADING_SAT_GAP, x, y
+            )
         self.draw_speed(radius, x, y)
         self.cr = None
         window.end_draw_frame(context)
@@ -364,18 +413,19 @@ return a tuple contains (x, y)
     def draw_text(self, x, y, text, fontsize=10):
         """draw text at given location.
 
-Args:
-    x, y is the center of textbox
-"""
+        Args:
+            x, y is the center of textbox
+        """
         txt = str(text)
         self.cr.new_sub_path()
         self.cr.set_source_rgba(0, 0, 0)
-        self.cr.select_font_face('Sans',
-                                 cairo.FONT_SLANT_NORMAL,
-                                 cairo.FONT_WEIGHT_BOLD)
+        self.cr.select_font_face(
+            "Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD
+        )
         self.cr.set_font_size(fontsize)
-        (_x_bearing, _y_bearing,
-         t_width, t_height) = self.cr.text_extents(txt)[:4]
+        (_x_bearing, _y_bearing, t_width, t_height) = (
+            self.cr.text_extents(txt)[:4]
+        )
         # set the center of textbox
         self.cr.move_to(x - t_width / 2, y + t_height / 2)
         self.cr.show_text(txt)
@@ -401,7 +451,9 @@ Args:
             alpha = (8 - i) * pi / 6
             self.cr.move_to(*self.polar2xy(rspeed, alpha, x, y))
             self.cr.set_line_width(radius / 100)
-            self.cr.line_to(*self.polar2xy(rspeed - s_long, alpha, x, y))
+            self.cr.line_to(
+                *self.polar2xy(rspeed - s_long, alpha, x, y)
+            )
             self.cr.stroke()
             self.cr.set_line_width(radius / 200)
             xf, yf = self.polar2xy(rspeed + 10, alpha, x, y)
@@ -413,13 +465,17 @@ Args:
             alpha = (8 - i) * pi / 6
             beta = (17 - 2 * i) * pi / 12
             self.cr.move_to(*self.polar2xy(rspeed, beta, x, y))
-            self.cr.line_to(*self.polar2xy(rspeed - s_middle, beta, x, y))
+            self.cr.line_to(
+                *self.polar2xy(rspeed - s_middle, beta, x, y)
+            )
 
             #  short tick
             for n in range(10):
                 gamma = alpha + n * pi / 60
                 self.cr.move_to(*self.polar2xy(rspeed, gamma, x, y))
-                self.cr.line_to(*self.polar2xy(rspeed - s_short, gamma, x, y))
+                self.cr.line_to(
+                    *self.polar2xy(rspeed - s_short, gamma, x, y)
+                )
 
         # draw the heading arc
         self.cr.new_sub_path()
@@ -436,11 +492,9 @@ Args:
             # self.cr.set_source_rgba(0, 1, 0)
             # radius * (1 + NauticalSpeedometer.HEADING_SAT_GAP),
             tbox_x, tbox_y = self.polar2xyr(
-                radius * 0.88,
-                (1 - n) * pi / 2,
-                x, y)
-            self.draw_text(tbox_x, tbox_y,
-                           label, fontsize=radius / 20)
+                radius * 0.88, (1 - n) * pi / 2, x, y
+            )
+            self.draw_text(tbox_x, tbox_y, label, fontsize=radius / 20)
 
         # draw the satellite arcs
         skyradius = radius * NauticalSpeedometer.HEADING_SAT_GAP
@@ -452,7 +506,9 @@ Args:
         self.cr.set_source_rgba(0, 0, 0)
 
         self.cr.arc(x, y, skyradius * 2 / 3, 0, 2 * pi)
-        self.cr.move_to(x + skyradius / 3, y)  # Avoid line connecting circles
+        self.cr.move_to(
+            x + skyradius / 3, y
+        )  # Avoid line connecting circles
         self.cr.arc(x, y, skyradius / 3, 0, 2 * pi)
 
         # draw the cross hair
@@ -470,7 +526,9 @@ Args:
         # draw the large ticks
         for i in range(12):
             agllong = i * pi / 6
-            self.cr.move_to(*self.polar2xy(radius - long_inset, agllong, x, y))
+            self.cr.move_to(
+                *self.polar2xy(radius - long_inset, agllong, x, y)
+            )
             self.cr.line_to(*self.polar2xy(radius, agllong, x, y))
             self.cr.set_line_width(radius / 100)
             self.cr.stroke()
@@ -478,21 +536,26 @@ Args:
 
             # middle tick
             aglmid = (i + 0.5) * pi / 6
-            self.cr.move_to(*self.polar2xy(radius - mid_inset, aglmid, x, y))
+            self.cr.move_to(
+                *self.polar2xy(radius - mid_inset, aglmid, x, y)
+            )
             self.cr.line_to(*self.polar2xy(radius, aglmid, x, y))
 
             #  short tick
             for n in range(1, 10):
                 aglshrt = agllong + n * pi / 60
-                self.cr.move_to(*self.polar2xy(radius - short_inset,
-                                aglshrt, x, y))
+                self.cr.move_to(
+                    *self.polar2xy(radius - short_inset, aglshrt, x, y)
+                )
                 self.cr.line_to(*self.polar2xy(radius, aglshrt, x, y))
             self.cr.stroke()
 
     def draw_heading(self, trig_height, heading, radius, x, y):
         """draw_heading."""
         hypo = trig_height * 2 / sqrt(3)
-        h = (pi / 2 - radians(heading) + self.rotate) % (pi * 2)  # to xyz
+        h = (pi / 2 - radians(heading) + self.rotate) % (
+            pi * 2
+        )  # to xyz
         self.cr.set_line_width(2)
         self.cr.set_source_rgba(0, 0.3, 0.2, 0.8)
 
@@ -516,7 +579,9 @@ Args:
 
         # heading text
         (tbox_x, tbox_y) = self.polar2xy(radius * 1.1, h, x, y)
-        self.draw_text(tbox_x, tbox_y, int(heading), fontsize=radius / 15)
+        self.draw_text(
+            tbox_x, tbox_y, int(heading), fontsize=radius / 15
+        )
 
         # the ship shape, based on test and try
         shiplen = radius * NauticalSpeedometer.HEADING_SAT_GAP / 4
@@ -545,10 +610,10 @@ Args:
     def draw_sat(self, satsoup, radius, x, y):
         """Given a sat's elevation, azimuth, SNR, draw it on the skyview.
 
-Arg:
-satsoup: a dictionary {'el': xx, 'az': xx, 'ss': xx}
-"""
-        el, az = satsoup['el'], satsoup['az']
+        Arg:
+        satsoup: a dictionary {'el': xx, 'az': xx, 'ss': xx}
+        """
+        el, az = satsoup["el"], satsoup["az"]
         if 0 == el and 0 == az:
             return  # Skip satellites with unknown position
         h = pi / 2 - radians(az)  # to xy
@@ -558,30 +623,34 @@ satsoup: a dictionary {'el': xx, 'az': xx, 'ss': xx}
         x0, y0 = self.polar2xyr(radius * (90 - el) // 90, h, x, y)
 
         self.cr.new_sub_path()
-        if gps.is_sbas(satsoup['PRN']):
-            self.cr.rectangle(x0 - NauticalSpeedometer.SAT_SIZE,
-                              y0 - NauticalSpeedometer.SAT_SIZE,
-                              NauticalSpeedometer.SAT_SIZE * 2,
-                              NauticalSpeedometer.SAT_SIZE * 2)
+        if gps.is_sbas(satsoup["PRN"]):
+            self.cr.rectangle(
+                x0 - NauticalSpeedometer.SAT_SIZE,
+                y0 - NauticalSpeedometer.SAT_SIZE,
+                NauticalSpeedometer.SAT_SIZE * 2,
+                NauticalSpeedometer.SAT_SIZE * 2,
+            )
         else:
-            self.cr.arc(x0, y0, NauticalSpeedometer.SAT_SIZE, 0, pi * 2.0)
+            self.cr.arc(
+                x0, y0, NauticalSpeedometer.SAT_SIZE, 0, pi * 2.0
+            )
 
-        if 10 > satsoup['ss']:
-            self.set_color('Gray')
-        elif 30 > satsoup['ss']:
-            self.set_color('Red')
-        elif 35 > satsoup['ss']:
-            self.set_color('Yellow')
-        elif 40 > satsoup['ss']:
-            self.set_color('Green3')
+        if 10 > satsoup["ss"]:
+            self.set_color("Gray")
+        elif 30 > satsoup["ss"]:
+            self.set_color("Red")
+        elif 35 > satsoup["ss"]:
+            self.set_color("Yellow")
+        elif 40 > satsoup["ss"]:
+            self.set_color("Green3")
         else:
-            self.set_color('Green1')
+            self.set_color("Green1")
 
-        if satsoup['used']:
+        if satsoup["used"]:
             self.cr.fill()
         else:
             self.cr.stroke()
-        self.draw_text(x0, y0, satsoup['PRN'], fontsize=15)
+        self.draw_text(x0, y0, satsoup["PRN"], fontsize=15)
 
     def draw_speed(self, radius, x, y):
         """draw_speed."""
@@ -598,27 +667,36 @@ satsoup: a dictionary {'el': xx, 'az': xx, 'ss': xx}
         self.cr.stroke()
         # self.cr.close_path()
         # self.cr.fill()
-        label = '%.2f %s' % (speed, self.speed_unit)
+        label = "%.2f %s" % (speed, self.speed_unit)
         self.draw_text(x, y + radius + 40, label, fontsize=20)
 
     def get_x_y(self):
         """get_x_y."""
         rect = self.get_allocation()
-        x = (rect.x + rect.width / 2.0)
+        x = rect.x + rect.width / 2.0
         y = (rect.y + rect.height / 2.0) - 20
         return x, y
 
     def get_radius(self, width, height):
-        """ get_radius."""
+        """get_radius."""
         return min(width / 2.0, height / 2.0) - 70
 
 
 class Main(object):
     """Main."""
 
-    def __init__(self, host='localhost', port=gps.GPSD_PORT, device=None,
-                 debug=0, speed_unit=None, maxspeed=0, nautical=False,
-                 rotate=0.0, target=""):
+    def __init__(
+        self,
+        host="localhost",
+        port=gps.GPSD_PORT,
+        device=None,
+        debug=0,
+        speed_unit=None,
+        maxspeed=0,
+        nautical=False,
+        rotate=0.0,
+        target="",
+    ):
         """Init class main."""
         self.daemon = None
         self.debug = debug
@@ -634,7 +712,7 @@ class Main(object):
             raise Exception("Can't open display")
         if target:
             target = " " + target
-        self.window.set_title('xgpsspeed' + target)
+        self.window.set_title("xgpsspeed" + target)
         self.window.connect("delete-event", self.delete_event)
 
         vbox = Gtk.VBox(homogeneous=False, spacing=0)
@@ -653,7 +731,8 @@ class Main(object):
             self.widget = NauticalSpeedometer(
                 speed_unit=self.speed_unit,
                 maxspeed=self.maxspeed,
-                rotate=self.rotate)
+                rotate=self.rotate,
+            )
         else:
             self.widget = LandSpeedometer(speed_unit=self.speed_unit)
 
@@ -661,8 +740,8 @@ class Main(object):
         self.speedframe.add(self.widget)
         vbox.add(self.speedframe)
 
-        self.window.connect('delete-event', self.delete_event)
-        self.window.connect('destroy', self.destroy)
+        self.window.connect("delete-event", self.delete_event)
+        self.window.connect("destroy", self.destroy)
         self.window.present()
 
         # File
@@ -672,8 +751,9 @@ class Main(object):
         topmenu.set_submenu(submenu)
         menui = Gtk.MenuItem(label="Quit")
         key, mod = Gtk.accelerator_parse("<Control>Q")
-        menui.add_accelerator("activate", agr, key, mod,
-                              Gtk.AccelFlags.VISIBLE)
+        menui.add_accelerator(
+            "activate", agr, key, mod, Gtk.AccelFlags.VISIBLE
+        )
         menui.connect("activate", Gtk.main_quit)
         submenu.append(menui)
 
@@ -683,9 +763,10 @@ class Main(object):
         submenu = Gtk.Menu()
         topmenu.set_submenu(submenu)
 
-        views = [["Nautical", False, "0", "Nautical"],
-                 ["Land", False, "1", "Land"],
-                 ]
+        views = [
+            ["Nautical", False, "0", "Nautical"],
+            ["Land", False, "1", "Land"],
+        ]
 
         if self.nautical:
             views[0][1] = True
@@ -699,8 +780,9 @@ class Main(object):
             menui.connect("activate", self.view_toggle, handle)
             if acc:
                 key, mod = Gtk.accelerator_parse(acc)
-                menui.add_accelerator("activate", agr, key, mod,
-                                      Gtk.AccelFlags.VISIBLE)
+                menui.add_accelerator(
+                    "activate", agr, key, mod, Gtk.AccelFlags.VISIBLE
+                )
             submenu.append(menui)
 
         # Units
@@ -709,10 +791,11 @@ class Main(object):
         submenu = Gtk.Menu()
         topmenu.set_submenu(submenu)
 
-        units = [["Imperial", True, "i", 'mph'],
-                 ["Nautical", False, "n", 'knots'],
-                 ["Metric", False, "m", 'km/h'],
-                 ]
+        units = [
+            ["Imperial", True, "i", "mph"],
+            ["Nautical", False, "n", "knots"],
+            ["Metric", False, "m", "km/h"],
+        ]
 
         menui = None
         for name, active, acc, handle in units:
@@ -721,8 +804,9 @@ class Main(object):
             menui.connect("activate", self.set_units, handle)
             if acc:
                 key, mod = Gtk.accelerator_parse(acc)
-                menui.add_accelerator("activate", agr, key, mod,
-                                      Gtk.AccelFlags.VISIBLE)
+                menui.add_accelerator(
+                    "activate", agr, key, mod, Gtk.AccelFlags.VISIBLE
+                )
             submenu.append(menui)
 
         # Help
@@ -743,16 +827,22 @@ class Main(object):
         """Show about dialog."""
         about = Gtk.AboutDialog()
         about.set_program_name("xgpsspeed")
-        about.set_version("Versions:\n"
-                          "xgpspeed %s\n"
-                          "PyGObject Version %d.%d.%d" %
-                          (gps_version, gi.version_info[0],
-                           gi.version_info[1], gi.version_info[2]))
+        about.set_version(
+            "Versions:\n"
+            "xgpspeed %s\n"
+            "PyGObject Version %d.%d.%d"
+            % (
+                gps_version,
+                gi.version_info[0],
+                gi.version_info[1],
+                gi.version_info[2],
+            )
+        )
         about.set_copyright("Copyright 2010 by The GPSD Project")
         about.set_website("https://gpsd.io/")
         about.set_website_label("https://gpsd.io/")
         about.set_license("BSD-2-clause")
-        iconpath = gps.__iconpath__ + '/gpsd-logo.png'
+        iconpath = gps.__iconpath__ + "/gpsd-logo.png"
         if os.access(iconpath, os.R_OK):
             pixbuf = GdkPixbuf.Pixbuf.new_from_file(iconpath)
             about.set_logo(pixbuf)
@@ -774,12 +864,24 @@ class Main(object):
         """Watch."""
         self.daemon = daemon
         self.device = device
-        GLib.io_add_watch(daemon.sock, GLib.PRIORITY_DEFAULT,
-                          GLib.IO_IN, self.handle_response)
-        GLib.io_add_watch(daemon.sock, GLib.PRIORITY_DEFAULT,
-                          GLib.IO_ERR, self.handle_hangup)
-        GLib.io_add_watch(daemon.sock, GLib.PRIORITY_DEFAULT,
-                          GLib.IO_HUP, self.handle_hangup)
+        GLib.io_add_watch(
+            daemon.sock,
+            GLib.PRIORITY_DEFAULT,
+            GLib.IO_IN,
+            self.handle_response,
+        )
+        GLib.io_add_watch(
+            daemon.sock,
+            GLib.PRIORITY_DEFAULT,
+            GLib.IO_ERR,
+            self.handle_hangup,
+        )
+        GLib.io_add_watch(
+            daemon.sock,
+            GLib.PRIORITY_DEFAULT,
+            GLib.IO_HUP,
+            self.handle_hangup,
+        )
         return True
 
     def view_toggle(self, action, name):
@@ -791,12 +893,13 @@ class Main(object):
 
         parent = self.widget.get_parent()
 
-        if 'Nautical' == name:
+        if "Nautical" == name:
             self.nautical = True
             widget = NauticalSpeedometer(
                 speed_unit=self.speed_unit,
                 maxspeed=self.maxspeed,
-                rotate=self.rotate)
+                rotate=self.rotate,
+            )
         else:
             self.nautical = False
             widget = LandSpeedometer(speed_unit=self.speed_unit)
@@ -810,11 +913,11 @@ class Main(object):
         """Handle_response."""
         if -1 == self.daemon.read():
             self.handle_hangup(source, condition)
-        if 'VERSION' == self.daemon.data['class']:
+        if "VERSION" == self.daemon.data["class"]:
             self.update_version(self.daemon.version)
-        elif 'TPV' == self.daemon.data['class']:
+        elif "TPV" == self.daemon.data["class"]:
             self.update_speed(self.daemon.data)
-        elif self.nautical and 'SKY' == self.daemon.data['class']:
+        elif self.nautical and "SKY" == self.daemon.data["class"]:
             self.update_skyview(self.daemon.data)
 
         return True
@@ -825,10 +928,10 @@ class Main(object):
             parent=self.window,
             message_type=Gtk.MessageType.ERROR,
             destroy_with_parent=True,
-            buttons=Gtk.ButtonsType.OK
+            buttons=Gtk.ButtonsType.OK,
         )
         w.connect("destroy", lambda unused: Gtk.main_quit())
-        w.set_title('gpsd error')
+        w.set_title("gpsd error")
         w.set_markup("gpsd has stopped sending data.")
         w.run()
         Gtk.main_quit()
@@ -836,33 +939,44 @@ class Main(object):
 
     def update_speed(self, data):
         """update_speed."""
-        if hasattr(data, 'speed'):
+        if hasattr(data, "speed"):
             self.widget.last_speed = data.speed
             self.widget.queue_draw()
-        if self.nautical and hasattr(data, 'track'):
+        if self.nautical and hasattr(data, "track"):
             self.widget.last_heading = data.track
             self.widget.queue_draw()
 
     # Used for NauticalSpeedometer only
     def update_skyview(self, data):
         """Update the satellite list and skyview."""
-        if hasattr(data, 'satellites'):
+        if hasattr(data, "satellites"):
             self.widget.satellites = data.satellites
             self.widget.queue_draw()
 
     def update_version(self, ver):
         """Update the Version."""
         if ver.release != gps_version:
-            sys.stderr.write("%s: WARNING gpsd version %s different than "
-                             "expected %s\n" %
-                             (sys.argv[0], ver.release, gps_version))
+            sys.stderr.write(
+                "%s: WARNING gpsd version %s different than "
+                "expected %s\n"
+                % (sys.argv[0], ver.release, gps_version)
+            )
 
-        if ((ver.proto_major != gps.api_version_major or
-             ver.proto_minor != gps.api_version_minor)):
-            sys.stderr.write("%s: WARNING API version %s.%s different than "
-                             "expected %s.%s\n" %
-                             (sys.argv[0], ver.proto_major, ver.proto_minor,
-                              gps.api_version_major, gps.api_version_minor))
+        if (
+            ver.proto_major != gps.api_version_major
+            or ver.proto_minor != gps.api_version_minor
+        ):
+            sys.stderr.write(
+                "%s: WARNING API version %s.%s different than "
+                "expected %s.%s\n"
+                % (
+                    sys.argv[0],
+                    ver.proto_major,
+                    ver.proto_minor,
+                    gps.api_version_major,
+                    gps.api_version_minor,
+                )
+            )
 
     def destroy(self, _unused, _empty=None):
         """destroy."""
@@ -874,8 +988,10 @@ class Main(object):
             daemon = gps.gps(
                 host=self.host,
                 port=self.port,
-                mode=gps.WATCH_ENABLE | gps.WATCH_JSON | gps.WATCH_SCALED,
-                verbose=self.debug
+                mode=gps.WATCH_ENABLE
+                | gps.WATCH_JSON
+                | gps.WATCH_SCALED,
+                verbose=self.debug,
             )
             self.watch(daemon, self.device)
             Gtk.main()
@@ -884,9 +1000,9 @@ class Main(object):
                 parent=self.window,
                 message_type=Gtk.MessageType.ERROR,
                 destroy_with_parent=True,
-                buttons=Gtk.ButtonsType.OK
+                buttons=Gtk.ButtonsType.OK,
             )
-            w.set_title('socket error')
+            w.set_title("socket error")
             w.set_markup(
                 "could not connect to gpsd socket. make sure gpsd is running."
             )
@@ -896,13 +1012,15 @@ class Main(object):
             pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    usage = '%(prog)s [OPTIONS] [host[:port[:device]]]'
-    epilog = ('Default units can be placed in the GPSD_UNITS environment'
-              ' variabla.\n\ne'
-              'BSD terms apply: see the file COPYING in the distribution root'
-              ' for details.')
+    usage = "%(prog)s [OPTIONS] [host[:port[:device]]]"
+    epilog = (
+        "Default units can be placed in the GPSD_UNITS environment"
+        " variabla.\n\ne"
+        "BSD terms apply: see the file COPYING in the distribution root"
+        " for details."
+    )
 
     # get default units from the environment
     # GPSD_UNITS, LC_MEASUREMENT and LANG
@@ -910,89 +1028,86 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(usage=usage, epilog=epilog)
     parser.add_argument(
-        '-?',
-        action="help",
-        help='show this help message and exit'
+        "-?", action="help", help="show this help message and exit"
     )
     parser.add_argument(
-        '-D',
-        '--debug',
-        dest='debug',
+        "-D",
+        "--debug",
+        dest="debug",
         default=0,
         type=int,
-        help='Set level of debug. Must be integer. [Default %(default)s]'
+        help="Set level of debug. Must be integer. [Default %(default)s]",
     )
     parser.add_argument(
-        '--device',
-        dest='device',
-        default='',
-        help='The device to connect. [Default %(default)s]'
+        "--device",
+        dest="device",
+        default="",
+        help="The device to connect. [Default %(default)s]",
     )
     parser.add_argument(
-        '--host',
-        dest='host',
-        default='localhost',
-        help='The host to connect. [Default %(default)s]'
+        "--host",
+        dest="host",
+        default="localhost",
+        help="The host to connect. [Default %(default)s]",
     )
     parser.add_argument(
-        '--landspeed',
-        dest='nautical',
+        "--landspeed",
+        dest="nautical",
         default=True,
-        action='store_false',
-        help='Enable dashboard-style speedometer.'
+        action="store_false",
+        help="Enable dashboard-style speedometer.",
     )
     parser.add_argument(
-        '--maxspeed',
-        dest='maxspeed',
-        default='50',
-        help='Max speed of the speedmeter [Default %(default)s]'
+        "--maxspeed",
+        dest="maxspeed",
+        default="50",
+        help="Max speed of the speedmeter [Default %(default)s]",
     )
     parser.add_argument(
-        '--nautical',
-        dest='nautical',
+        "--nautical",
+        dest="nautical",
         default=True,
-        action='store_true',
-        help='Enable nautical-style speed and track display.'
+        action="store_true",
+        help="Enable nautical-style speed and track display.",
     )
     parser.add_argument(
-        '--port',
-        dest='port',
+        "--port",
+        dest="port",
         default=gps.GPSD_PORT,
-        help='The port to connect. [Default %(default)s]'
+        help="The port to connect. [Default %(default)s]",
     )
     parser.add_argument(
-        '-r',
-        '--rotate',
-        dest='rotate',
+        "-r",
+        "--rotate",
+        dest="rotate",
         default=0,
         type=float,
         help='Rotation of skyview ("up" direction) in degrees. '
-             ' [Default %(default)s]'
+        " [Default %(default)s]",
     )
     parser.add_argument(
-        '--speedunits',
-        dest='speedunits',
+        "--speedunits",
+        dest="speedunits",
         default=default_units.speedunits,
-        choices=['mph', 'km/h', 'knots'],
-        help='The unit of speed. [Default %(default)s]'
+        choices=["mph", "km/h", "knots"],
+        help="The unit of speed. [Default %(default)s]",
     )
     parser.add_argument(
-        '-V', '--version',
-        action='version',
+        "-V",
+        "--version",
+        action="version",
         version="%(prog)s: Version " + gps_version + "\n",
-        help='Output version to stderr, then exit'
+        help="Output version to stderr, then exit",
     )
     parser.add_argument(
-        'target',
-        nargs='?',
-        help='[host[:port[:device]]]'
+        "target", nargs="?", help="[host[:port[:device]]]"
     )
     options = parser.parse_args()
 
     # the options host, port, device are set by the defaults
     if options.target:
         # override with target
-        arg = options.target.split(':')
+        arg = options.target.split(":")
         len_arg = len(arg)
         if 1 == len_arg:
             (options.host,) = arg
@@ -1007,9 +1122,9 @@ if __name__ == '__main__':
     if not options.port:
         options.port = gps.GPSD_PORT
 
-    target = ':'.join([options.host, options.port, options.device])
+    target = ":".join([options.host, options.port, options.device])
 
-    if 'DISPLAY' not in os.environ or not os.environ['DISPLAY']:
+    if "DISPLAY" not in os.environ or not os.environ["DISPLAY"]:
         sys.stderr.write("xgpsspeed: ERROR: DISPLAY not set\n")
         sys.exit(1)
 
