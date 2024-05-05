@@ -24,6 +24,7 @@ from __future__ import absolute_import, print_function
 import os
 import re
 import struct
+import sys
 from . import misc
 
 INVALID_PACKET = -1
@@ -65,7 +66,7 @@ LOG_RAW2 = 10
 ISGPS_ERRLEVEL_BASE = LOG_RAW
 
 loghook = None
-prep = lambda x: print(repr(x))
+prep = lambda x: print(repr(x), file=sys.stderr)
 
 
 def register_report(reporter):
@@ -95,11 +96,18 @@ class Lexer(object):
     eof = False
     lextable = [
         [r"\A([\r\n]+)", "nl"],
-        [r"\A(#[^\r\n]*[\r\n]+)", "comment"],
+        [r"\A(#.*[\r\n]+)", "comment"],
         [r"\A(\$.+\*..[\r\n]+)", "nmea"],
-        [r"\A(\!.+\*..[\r\n]+)", "nmea"],  # AIS
+        [r"\A(\!AIVDM,.+\*..[\r\n]+)", "aivdm"],
+        [r"\A(\xa0\xa2.+\xb0\xb3)", "sirf"],
+        [r"\A(\xff\x81.*)", "zodiac"],
         [r"\A(\xb5b.*)", "ubx"],
         [r"\A(\$STI,.+[\r\n]+)", "nmea_nosig"],
+        [
+            r"\A(\*[0-9]{12}[NS][0-9]{7}[EW][0-9]{8}[sDgGS_][0-9]{3}[\+-]"
+            "[0-9]{5}[EW][0-9]{4}[NS][0-9]{4}[UD][0-9]{4}[\r\n]+)",
+            "garmintxt",
+        ],
     ]
 
     def __init__(self):
@@ -119,14 +127,15 @@ class Lexer(object):
         self.ibuf += misc.polystr(red_buffer)
         tbuf = self.ibuf
         if not nest:
+            ret = self.packet_parse()
             if ret:
-                return self.packet_parse()
+                return ret
             if self.eof and not self.ibuf:
                 return [0, INVALID_PACKET, b"", self.sbufptr]
         else:
             ret = []
             while True:
-                ret2 = self.packet.parse()
+                ret2 = self.packet_parse()
                 if ret2:
                     ret.append(ret2)
                 elif ret:
@@ -147,6 +156,7 @@ class Lexer(object):
 
     def packet_parse(self):
         for self.ibufptr in range(len(self.ibuf)):
+            # prep([self.ibufptr, self.ibuf])
             scratch = self.ibuf[self.ibufptr :]
             ret = self.next_state(scratch)
             if ret:
@@ -168,22 +178,65 @@ class Lexer(object):
     def bless_nmea_nosig(self, length, _):
         return self.accept_bless(length, NMEA_PACKET)
 
+    def bless_garmintxt(self, length, _):
+        return self.accept_bless(length, GARMINTXT_PACKET)
+
     def bless_nmea(self, length, scratch):
         xor = 0
-        nmea = scratch[:length]
-        for byte in nmea[1:-5]:
+        nmea = scratch[:length].rstrip()
+        for byte in nmea[1:-3]:
             xor ^= ord(byte)
-        if nmea[-4:-2].lower() == "%02x" % xor:
+        if nmea[-2:].lower() == "%02x" % xor:
             return self.accept_bless(length, NMEA_PACKET)
         return None
 
     def bless_comment(self, length, _):
         return self.accept_bless(length, COMMENT_PACKET)
+        # return self.reject_bless(length)
 
     def bless_nl(self, length, _):
         return self.reject_bless(length)
 
-    def bless_ubx(self, length_, scratch):
+    def bless_aivdm(self, length, scratch):
+        xor = 0
+        nmea = scratch[:length].rstrip()
+        for byte in nmea[1:-3]:
+            xor ^= ord(byte)
+        if nmea[-2:].lower() == "%02x" % xor:
+            return self.accept_bless(length, AIVDM_PACKET)
+        return self.reject_bless(length)
+
+    def bless_sirf(self, _, scratch):
+        length = (
+            struct.unpack("<H", misc.polybytes(scratch[2:4]))[0] + 8
+        )
+        frag = scratch[:length]
+        csum = 0
+        for char in frag[3:-4]:
+            csum += ord(char)
+        csump = struct.unpack("<H", misc.polybytes(scratch[-4:-2]))[0]
+        if csump != csum:
+            return self.reject_bless(length)
+        return self.accept_bless(length, SIRF_PACKET)
+
+    def bless_zodiac(self, _length, scratch):
+        header = struct.unpack("<HHHHH", misc.polybytes(scratch[:10]))
+        if 0 != sum(header) % (1 << 16):
+            prep([sum(header) % (1 << 16), header])
+            return self.reject_bless(_length)
+        length = header[2] * 2
+        if 10 == length:  # seems to never happen
+            return self.accept_bless(length + 4, ZODIAC_PACKET)
+        words = [
+            struct.unpack("<H", misc.polybytes(scratch[x + 10 : x + 12]))[0]
+            for x in range(length + 2, 2)
+        ]
+        if 0 != sum(words) % (1 << 16):
+            prep([sum(words) % (1 << 16), words])
+            return self.reject_bless(length)
+        return self.accept_bless(length + 12, ZODIAC_PACKET)
+
+    def unbless_ubx(self, length_, scratch):
         prep(scratch)
         length = (
             struct.unpack("<H", misc.polybytes(scratch[4:6]))[0] + 8
