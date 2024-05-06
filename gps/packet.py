@@ -145,7 +145,6 @@ class Lexer(object):
     def packet_parse(self):
         """Scan inside inbuf to find packet beginnings."""
         for self.ibufptr in range(len(self.ibuf)):
-            # prep([self.ibufptr, self.ibuf], -1)
             scratch = self.ibuf[self.ibufptr :]
             ret = self.next_state(scratch)
             if isinstance(ret, list):
@@ -191,13 +190,15 @@ class Lexer(object):
         """Check potential NMEA for valid checksum."""
         commento = scratch[:length]
         for check in "{$!\xb5":
-            if check in commento:
-                pointer = commento.index(check)
-                return [pointer, COMMENT_PACKET]
+            if check not in commento:
+                continue
+            pointer = commento.index(check)
+            if self.next_state(scratch[pointer:]):
+                return None
         return [length, COMMENT_PACKET]
         # return None
     
-    def bless_json(self, length, scratch):
+    def bless_json(self, _, scratch):
         """Validate would be JSON."""
         last = 0
         for _ in range(scratch.count("}")):
@@ -241,7 +242,6 @@ class Lexer(object):
         """Validate Zodiac packets."""
         header = struct.unpack("<HHHHH", misc.polybytes(scratch[:10]))
         if 0 != sum(header) % (1 << 16):
-            prep([sum(header) % (1 << 16), header])
             return None
         length = header[2] * 2
         if 10 == length:  # seems to never happen
@@ -251,7 +251,6 @@ class Lexer(object):
             for x in range(length + 2, 2)
         ]
         if 0 != sum(words) % (1 << 16):
-            prep([sum(words) % (1 << 16), words])
             return None
         return [length + 12, ZODIAC_PACKET]
 
@@ -259,12 +258,10 @@ class Lexer(object):
         return [length, TSIP_PACKET]
 
     def bless_ubx(self, length_, scratch):
-        prep(scratch)
+        """Validate u-blox packets."""
         length = (
             struct.unpack("<H", misc.polybytes(scratch[4:6]))[0] + 8
         )
-        if length_ != length:
-            prep([length_, length])
         frag = scratch[:length]
         a = b = 0
         for char in frag[2:-2]:
@@ -272,14 +269,6 @@ class Lexer(object):
             b += a
             a &= 255
             b &= 255
-        prep(
-            [
-                [a, b],
-                [ord(frag[-4]), ord(frag[-3])],
-                length,
-                "".join("%02x" % ord(x) for x in frag),
-            ]
-        )
         if frag[-2:] == "%c%c" % (a, b):
             return [length, UBX_PACKET]
         return None
