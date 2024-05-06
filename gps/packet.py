@@ -21,6 +21,7 @@ for debug message reporting.  The callback will get two arguments: the error
 level of the message; and the message itself.
 """
 from __future__ import absolute_import, print_function
+import json
 import os
 import re
 import struct
@@ -97,9 +98,12 @@ class Lexer(object):
     lextable = [
         [r"\A([\r\n]+)", "nl"],
         [r"\A(#.*[\r\n]+)", "comment"],
+        [r"\A(\{.*\}[\r\n]+)", "json"],
         [r"\A(\$.+\*..[\r\n]+)", "nmea"],
-        [r"\A(\!AIVDM,.+\*..[\r\n]+)", "aivdm"],
+        [r"\A(\!.+\*..[\r\n]+)", "aivdm"],
         [r"\A(\xa0\xa2.+\xb0\xb3)", "sirf"],
+        
+        [r"\A(\x10.*\x10\x03)", "tsip"],
         [r"\A(\xff\x81.*)", "zodiac"],
         [r"\A(\xb5b.*)", "ubx"],
         [r"\A(\$STI,.+[\r\n]+)", "nmea_nosig"],
@@ -190,9 +194,25 @@ class Lexer(object):
             return self.accept_bless(length, NMEA_PACKET)
         return None
 
-    def bless_comment(self, length, _):
+    def bless_comment(self, length, scratch):
+        """
+        pushback = self.ibuf
+        for check in "{$!\xb5":
+            if check in scratch:
+                pointer = scratch.index(check)
+                if self.next_state(scratch[pointer:]):
+                    self.pushback(pushback)
+                    return self.accept_bless(pointer - 1, COMMENT_PACKET)
+        """
         return self.accept_bless(length, COMMENT_PACKET)
         # return self.reject_bless(length)
+    
+    def bless_json(self, length, scratch):
+        try:
+            _ = json.loads(scratch.rstrip("\r\n"))
+            return self.accept_bless(length, JSON_PACKET)
+        except json.JSONDecodeError:
+            return self.reject_bless(length)
 
     def bless_nl(self, length, _):
         return self.reject_bless(length)
@@ -236,7 +256,10 @@ class Lexer(object):
             return self.reject_bless(length)
         return self.accept_bless(length + 12, ZODIAC_PACKET)
 
-    def unbless_ubx(self, length_, scratch):
+    def unbless_tsip(self, length, _):
+        return self.accept_bless(length, TSIP_PACKET)
+
+    def bless_ubx(self, length_, scratch):
         prep(scratch)
         length = (
             struct.unpack("<H", misc.polybytes(scratch[4:6]))[0] + 8
