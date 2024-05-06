@@ -104,7 +104,7 @@ class Lexer(object):
     lextable = [
         [r"\A([\r\n]+)", "nl"],
         [r"\A(#.*[\r\n]+)", "comment"],
-        [r"\A(\{[^\r\n]*\}[\r\n]+)", "json"],
+        [r"\A(\{[^\r\n]+)", "json"],
         [r"\A(\$.+\*..[\r\n]+)", "nmea"],
         [r"\A(\!.+\*..[\r\n]+)", "aivdm"],
         [r"\A(\xa0\xa2.+\xb0\xb3)", "sirf"],
@@ -148,7 +148,7 @@ class Lexer(object):
             # prep([self.ibufptr, self.ibuf], -1)
             scratch = self.ibuf[self.ibufptr :]
             ret = self.next_state(scratch)
-            if ret:
+            if isinstance(ret, list):
                 return self.accept_bless(*ret)
         return None
 
@@ -193,19 +193,21 @@ class Lexer(object):
         for check in "{$!\xb5":
             if check in commento:
                 pointer = commento.index(check)
-                if self.next_state(scratch[pointer:]):
-                    # self.pushback(pushback)
-                    return [pointer, COMMENT_PACKET]
+                return [pointer, COMMENT_PACKET]
         return [length, COMMENT_PACKET]
         # return None
     
     def bless_json(self, length, scratch):
         """Validate would be JSON."""
-        try:
-            _ = json.loads(scratch.rstrip("\r\n"))
-            return [length, JSON_PACKET]
-        except json.JSONDecodeError:
-            return None
+        last = 0
+        for _ in range(scratch.count("}")):
+            last = scratch.index("}", last + 1) + 1
+            try:
+                _ = json.loads(scratch[:last])
+                return [last, JSON_PACKET]
+            except json.JSONDecodeError:
+                pass
+        return None
 
     def bless_nl(self, _a, _b):  # length, scratch
         """Reject spare line ending bytes."""
