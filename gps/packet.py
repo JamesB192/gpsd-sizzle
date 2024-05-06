@@ -67,7 +67,13 @@ LOG_RAW2 = 10
 ISGPS_ERRLEVEL_BASE = LOG_RAW
 
 loghook = None
-prep = lambda x: print(repr(x), file=sys.stderr)
+debug = LOG_WARN
+
+
+def prep(tokens, level=LOG_RAW2):
+    """Print representation of tokens to stderr if logging heavy."""
+    if debug > level:
+        sys.stderr.write(repr(tokens)+"\r\n")
 
 
 def register_report(reporter):
