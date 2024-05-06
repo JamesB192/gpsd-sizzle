@@ -30,7 +30,7 @@ except ImportError as e:
         "gpscat: can't load Python gps libraries -- check PYTHONPATH.\n"
     )
     sys.stderr.write("%s\n" % e)
-    sys.exit(1)
+    exit(1)
 
 gps_version = "2024.5.5"
 if gps.__version__ != gps_version:
@@ -38,7 +38,7 @@ if gps.__version__ != gps_version:
         "gpscat: ERROR: need gps module version %s, got %s\n"
         % (gps_version, gps.__version__)
     )
-    sys.exit(1)
+    exit(1)
 
 
 # The spec says 82, but some receivers (TN-200, GSW 2.3.2) output 86 characters
@@ -69,7 +69,7 @@ def hexdump(st):
 def reporter(errlevel, mesg):
     """Report errors, depending on log level."""
     if errlevel <= options.debug:
-        sys.stdout.write(mesg)
+        sys.stderr.write(mesg)
 
 
 if __name__ == "__main__":
@@ -158,7 +158,11 @@ if __name__ == "__main__":
             s.connect((options.target, 1))
             tty = s.fileno()
         else:  # Ordinary device
-            tty = os.open(options.target, os.O_RDONLY)
+            try:
+                tty = os.open(options.target, os.O_RDWR)
+            except Exception as e:
+                print("gpscat: ERROR: %s.\n" % e)
+                exit(1)
 
         if options.speed is not None:
             (iflag, oflag, cflag, lflag, ispeed, ospeed, cc) = (
@@ -166,11 +170,9 @@ if __name__ == "__main__":
             )
             try:
                 ispeed = ospeed = eval("termios.B%d" % options.speed)
-            except AttributeError:
-                sys.stderr.write(
-                    "gpscat: unknown baud rate %d\n" % options.speed
-                )
-                raise SystemExit(1)
+            except AttributeError as e:
+                sys.stderr.write("gpscat: ERROR: %s\n" % e)
+                exit(1)
             if options.stopbits:
                 cflag &= ~termios.CSIZE
                 cflag |= (termios.CS8, termios.CS7)[
@@ -205,28 +207,37 @@ if __name__ == "__main__":
                     buf = os.read(tty, NMEA_MAX)
                     if not buf:
                         break
-                    sys.stdout.write(hexdump(buf))
+                    print(hexdump(buf))
                 else:
                     (length, ptype, packet, counter) = getter.get(tty)
                     seqno += 1
                     if 0 == length:
                         break
                     if options.typeflag:
-                        sys.stdout.write(
-                            "%d (%d@%d): %s\n"
-                            % (
-                                ptype,
-                                length,
-                                counter - length,
-                                hexdump(packet),
+                        try:
+                            print(
+                                "%d (%d@%d): %s\n"
+                                % (
+                                    ptype,
+                                    length,
+                                    counter - length,
+                                    hexdump(packet),
+                                )
                             )
-                        )
+                        except BrokenPipeError:
+                            # stdout piped to a prgram that died.
+                            # Like "head" does by default.
+                            # die quietly
+                            exit(1)
+                        except Exception as e:
+                            sys.stderr.write("%s\n" % e)
+                            exit(1)
                     else:
-                        sys.stdout.write(hexdump(packet) + "\n")
-    except (BrokenPipeError, KeyboardInterrupt):
+                        print(hexdump(packet) + "\n")
+    except KeyboardInterrupt:
         if options.rawmode:
-            sys.stdout.write("\n")
-        raise SystemExit(0)
+            print("\n")
+        exit(0)
 
 # Local variables:
 # mode: python
