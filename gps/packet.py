@@ -28,44 +28,27 @@ import struct
 import sys
 from . import misc
 
-INVALID_PACKET = -1
-COMMENT_PACKET = 0
-NMEA_PACKET = 1
-AIVDM_PACKET = 2
-GARMINTXT_PACKET = 3
-SIRF_PACKET = 4
-ZODIAC_PACKET = 5
-TSIP_PACKET = 6
-EVERMORE_PACKET = 7
-ITALK_PACKET = 8
-GARMIN_PACKET = 9
-NAVCOM_PACKET = 10
-UBX_PACKET = 11
-SUPERSTAR2_PACKET = 12
-ONCORE_PACKET = 13
-GEOSTAR_PACKET = 14
-NMEA2000_PACKET = 15
-GREIS_PACKET = 16
-SKY_PACKET = 17
-ALLYSTAR_PACKET = 18
-MAX_GPSPACKET_TYPE = 18
-RTCM2_PACKET = 19
-RTCM3_PACKET = 20
-JSON_PACKET = 21
-PACKET_TYPES = 21
-LOG_SHOUT = 0
-LOG_WARN = 1
-LOG_CLIENT = 2
-LOG_INF = 3
-LOG_PROG = 4
-LOG_IO = 5
-LOG_DATA = 6
-LOG_SPIN = 7
-LOG_RAW = 8
-LOG_RAW1 = 9
-LOG_RAW2 = 10
-ISGPS_ERRLEVEL_BASE = LOG_RAW
+_loglevels = "shout warn client inf prog io data spin raw raw1 raw2"
+_pkts = (
+    "truncated invalid comment nmea aivdm garmintxt sirf zodiac"
+    " tsip evermore italk garmin navcom ubx supertar oncore "
+    "geostar nmea2000 greis sky allystar rtcm2 rtcm3 json"
+)
 
+globby = {}
+idx = 0
+for key in _loglevels.split(" "):
+    globby["LOG_" + key.upper()] = idx
+    idx += 1
+idx = -2
+for key in _pkts.split(" "):
+    globby[key.upper() + "_PACKET"] = idx
+    idx += 1
+for key in globby:
+    globals()[key] = globby[key]
+MAX_GPSPACKET_TYPE = ALLYSTAR_PACKET
+PACKET_TYPES = JSON_PACKET
+ISGPS_ERRLEVEL_BASE = LOG_RAW
 loghook = None
 debug = LOG_WARN
 
@@ -73,7 +56,7 @@ debug = LOG_WARN
 def prep(tokens, level=LOG_RAW2):
     """Print representation of tokens to stderr if logging heavy."""
     if debug > level:
-        sys.stderr.write(repr(tokens)+"\r\n")
+        sys.stderr.write(repr(tokens) + "\r\n")
 
 
 def register_report(reporter):
@@ -92,6 +75,14 @@ def new():
     return Lexer()
 
 
+def polyunpack1(fmt, buffer):
+    return struct.unpack(fmt, misc.polybytes(buffer))[0]
+
+
+def polyunpack(fmt, buffer):
+    return struct.unpack(fmt, misc.polybytes(buffer))
+
+
 class Lexer(object):
     """GPS packet lexer object
 
@@ -102,20 +93,22 @@ class Lexer(object):
     sbufptr = 0
     eof = False
     lextable = [
-        [r"\A([\r\n]+)", "nl"],
+        [r"\A([\r\n]+)", "reject"],
         [r"\A(#.*[\r\n]+)", "comment"],
         [r"\A(\{[^\r\n]+)", "json"],
-        [r"\A(\$.+\*..[\r\n]+)", "nmea"],
-        [r"\A(\!.+\*..[\r\n]+)", "aivdm"],
+        [r"\A(\$.+\*..[\r\n]+)", "nmea", NMEA_PACKET],
+        [r"\A(\!.+\*..[\r\n]+)", "aivdm", AIVDM_PACKET],
+        [r"\A(\x01\xa1.*\x0d\x0a)", "skytraq"],
         [r"\A(\xa0\xa2.+\xb0\xb3)", "sirf"],
-
-        [r"\A(\x10.*\x10\x03)", "tsip"],
+        # [r"\A([\x02\x04\x23].*\x03[\r\n]+)", "greis"],
+        # [r"\A(\x10.*\x10\x03)", "tsip"],
         [r"\A(\xff\x81.*)", "zodiac"],
-        [r"\A(\xb5b.*)", "ubx"],
+        [r"\A(\xb5b.*)", "ubx", UBX_PACKET],
+        [r"\A(\xf1\xd9.*)", "ubx", ALLYSTAR_PACKET],
         [r"\A(\$STI,.+[\r\n]+)", "nmea_nosig"],
         [
-            r"\A(\*[0-9]{12}[NS][0-9]{7}[EW][0-9]{8}[sDgGS_][0-9]{3}[\+-]"
-            "[0-9]{5}[EW][0-9]{4}[NS][0-9]{4}[UD][0-9]{4}[\r\n]+)",
+            r"\A(\*[0-9]{12}[NS][0-9]{7}[EW][0-9]{8}[sDgGS_][0-9]{3}"
+            "[+-][0-9]{5}[EW][0-9]{4}[NS][0-9]{4}[UD][0-9]{4}[\r\n]+)",
             "garmintxt",
         ],
     ]
@@ -157,8 +150,16 @@ class Lexer(object):
             pats = re.match(row[0], scratch)
             if not pats:
                 continue
-            hook = getattr(self, "bless_" + row[1])
-            mid = hook(len(pats.group(1)), scratch)
+            try:
+                hook = getattr(self, "bless_" + row[1])
+            except KeyError:
+                print("KeyError: " + repr(e), file=sys.stderr)
+                return None
+            try:
+                mid = hook(len(pats.group(1)), scratch, *row[2:])
+            except struct.error as e:
+                print("struct: " + repr(e), file=sys.stderr)
+                return None
             if mid is None:
                 continue
             return mid
@@ -166,6 +167,9 @@ class Lexer(object):
             self.sbufptr = 0
             self.ibuf = ""
             self.ibufptr = 0
+        return None
+
+    def too_short(self, length):
         return None
 
     def bless_nmea_nosig(self, length, _):
@@ -176,15 +180,15 @@ class Lexer(object):
         """Assume regex matchers are Garmin text protocol."""
         return [length, GARMINTXT_PACKET]
 
-    def bless_nmea(self, length, scratch):
-        """Check potential NMEA for valid checksum."""
+    def bless_nmea(self, length, scratch, typed):
+        """Check potential NMEA/AIVDM for valid checksum."""
         xor = 0
         nmea = scratch[:length].rstrip()
         for byte in nmea[1:-3]:
             xor ^= ord(byte)
         if nmea[-2:].lower() != "%02x" % xor:
             return None
-        return [length, NMEA_PACKET]
+        return [length, typed]
 
     def bless_comment(self, length, scratch):
         """Check potential NMEA for valid checksum."""
@@ -197,7 +201,7 @@ class Lexer(object):
                 return None
         return [length, COMMENT_PACKET]
         # return None
-    
+
     def bless_json(self, _, scratch):
         """Validate would be JSON."""
         last = 0
@@ -210,44 +214,36 @@ class Lexer(object):
                 pass
         return None
 
-    def bless_nl(self, _a, _b):  # length, scratch
-        """Reject spare line ending bytes."""
+    def bless_reject(self, _a, _b):  # length, scratch
+        """Reject packet matching a regex."""
         return None
 
-    def bless_aivdm(self, length, scratch):
-        """Check potential AIS for valid checksum."""
-        xor = 0
-        nmea = scratch[:length].rstrip()
-        for byte in nmea[1:-3]:
-            xor ^= ord(byte)
-        if nmea[-2:].lower() != "%02x" % xor:
-            return None
-        return [length, AIVDM_PACKET]
-
-    def bless_sirf(self, _, scratch):
+    def bless_sirf(self, _length, scratch):
         """Validate SiRF packets."""
-        length = (
-            struct.unpack("<H", misc.polybytes(scratch[2:4]))[0] + 8
-        )
+        if 4 > _length:
+            return self.too_short(_length)
+        length = polyunpack1("<H", scratch[2:4]) + 8
+        if length > _length:
+            return self.too_short(_length)
         frag = scratch[:length]
         csum = 0
         for char in frag[3:-4]:
             csum += ord(char)
-        csump = struct.unpack("<H", misc.polybytes(scratch[-4:-2]))[0]
+        csump = polyunpack1("<H", scratch[-4:-2])
         if csump != csum:
             return None
         return [length, SIRF_PACKET]
 
-    def bless_zodiac(self, _length, scratch):
+    def bless_zodiac(self, _, scratch):
         """Validate Zodiac packets."""
-        header = struct.unpack("<HHHHH", misc.polybytes(scratch[:10]))
+        header = polyunpack("<HHHHH", scratch[:10])
         if 0 != sum(header) % (1 << 16):
             return None
         length = header[2] * 2
         if 10 == length:  # seems to never happen
             return self.accept_bless(length + 4, ZODIAC_PACKET)
         words = [
-            struct.unpack("<H", misc.polybytes(scratch[x + 10 : x + 12]))[0]
+            polyunpack1("<H", scratch[x + 10 : x + 12])
             for x in range(length + 2, 2)
         ]
         if 0 != sum(words) % (1 << 16):
@@ -257,23 +253,24 @@ class Lexer(object):
     def bless_tsip(self, length, _):
         return [length, TSIP_PACKET]
 
-    def bless_ubx(self, length_, scratch):
-        """Validate u-blox packets."""
-        length = (
-            struct.unpack("<H", misc.polybytes(scratch[4:6]))[0] + 8
-        )
+    def bless_ubx(self, _length, scratch, typed):
+        """Validate u-blox/allystar packets."""
+        if 6 > _length:
+            return self.too_short(_length)
+        length = polyunpack1("<H", scratch[4:6]) + 8
+        if length > _length:
+            return self.too_short(_length)
         frag = scratch[:length]
         a = b = 0
         for char in frag[2:-2]:
-            a += ord(char)
-            b += a
-            a &= 255
-            b &= 255
+            a = (a + ord(char)) & 0xFF
+            b = (b + a) & 0xFFB
         if frag[-2:] == "%c%c" % (a, b):
-            return [length, UBX_PACKET]
+            return [length, typed]
         return None
 
     def accept_bless(self, length, typed):
+        """Acccept/return packet and update the buffer."""
         self.sbufptr += (
             length + self.ibufptr
         )  # dang gpscat takes counter - length
@@ -286,3 +283,29 @@ class Lexer(object):
         self.ibuf = self.ibuf[length + self.ibufptr :]
         self.ibufptr = 0
         return ret
+
+    def bless_skytraq(self, _length, scratch):
+        """Validate skytaq packets."""
+        if 6 > _length:
+            return self.too_short(_length)
+        length = polyunpack1("<H", scratch[2:4]) + 7
+        if length > _length:
+            return self.too_short(_length)
+        subby = scratch[:length]
+        cs = 0
+        for char in subby[4:-3]:
+            cs ^= ord(char)
+        if cs != ord(subby[-3]):
+            return None
+        return [length, SKY_PACKET]
+
+    def bless_greis(self, _, scratch):
+        length = polyunpack1("<H", scratch[3:5]) + 6
+        subby = scratch[:length].rstrip("\r\n")
+        pc = polyunpack1("<H", subby[1:3])
+
+
+__all__ = (
+    "new register_report MAX_GPSPACKET_TYPE "
+    "__new__ PACKET_TYPES ISGPS_ERRLEVEL_BASE"
+).split(" ") + list(globby)
