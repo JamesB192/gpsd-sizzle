@@ -203,37 +203,34 @@ if __name__ == "__main__":
         while True:
             rlist, wlist, xlist = select.select([tty], [], [])
             if rlist == [tty]:
-                if options.rawmode:
-                    buf = os.read(tty, NMEA_MAX)
-                    if not buf:
-                        break
-                    print(hexdump(buf))
-                else:
-                    (length, ptype, packet, counter) = getter.get(tty)
-                    seqno += 1
-                    if 0 == length:
-                        break
-                    if options.typeflag:
-                        try:
-                            print(
-                                "%d (%d@%d): %s\n"
-                                % (
-                                    ptype,
-                                    length,
-                                    counter - length,
-                                    hexdump(packet),
-                                )
-                            )
-                        except BrokenPipeError:
-                            # stdout piped to a prgram that died.
-                            # Like "head" does by default.
-                            # die quietly
-                            exit(1)
-                        except Exception as e:
-                            sys.stderr.write("%s\n" % e)
-                            exit(1)
+                try:
+                    if options.rawmode:
+                        buf = os.read(tty, NMEA_MAX)
+                        if not buf:
+                            break
+                        print(hexdump(buf))
                     else:
-                        print(hexdump(packet) + "\n")
+                        (length, ptype, packet, counter) = getter.get(
+                            tty
+                        )
+                        seqno += 1
+                        if 0 == length:
+                            break
+                        if options.typeflag:
+                            start = counter - length
+                            print(
+                                "%d (%d@%d): " % (ptype, length, start),
+                                end="",
+                            )
+                        print(hexdump(packet))
+                except BrokenPipeError:
+                    # stdout piped to a prgram that died.
+                    # Like "head" does by default.
+                    # die quietly
+                    exit(1)
+                except Exception as e:
+                    sys.stderr.write("%s\n" % e)
+                    exit(1)
     except KeyboardInterrupt:
         if options.rawmode:
             print("\n")
