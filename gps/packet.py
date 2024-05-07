@@ -152,7 +152,7 @@ class Lexer(object):
                 continue
             try:
                 hook = getattr(self, "bless_" + row[1])
-            except KeyError:
+            except KeyError as e:
                 print("KeyError: " + repr(e), file=sys.stderr)
                 return None
             try:
