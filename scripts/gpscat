@@ -63,7 +63,7 @@ def hexdump(st):
             dmp += chr(ch)
         else:
             dmp += "\\x%02x" % ch
-    return dmp
+    return dmp.rstrip("\r\n")
 
 
 def reporter(errlevel, mesg):
