@@ -53,7 +53,7 @@ loghook = None
 debug = LOG_WARN
 
 
-def prep(tokens, level=LOG_RAW2):
+def prep(level, tokens):
     """Print representation of tokens to stderr if logging heavy."""
     if debug > level:
         sys.stderr.write(repr(tokens) + "\r\n")
