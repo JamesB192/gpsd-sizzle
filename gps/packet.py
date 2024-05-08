@@ -85,6 +85,12 @@ def polyunpack(fmt, buffer):
     return struct.unpack(fmt, misc.polybytes(buffer))
 
 
+class TooShort(Exception):
+    """Complain that a packet is not long enough."""
+
+    value = "truncated the packet"
+
+
 class Lexer(object):
     """GPS packet lexer object
 
@@ -173,7 +179,7 @@ class Lexer(object):
         return None
 
     def too_short(self, length):
-        return None
+        raise TooShort
 
     def bless_nmea_nosig(self, length, _):
         """Assume all cr/lf terminated "$STI.*" strings are NMEA."""
@@ -274,6 +280,8 @@ class Lexer(object):
 
     def accept_bless(self, length, typed):
         """Acccept/return packet and update the buffer."""
+        if length > len(self.ibuf):
+            raise TooShort
         self.sbufptr += (
             length + self.ibufptr
         )  # dang gpscat takes counter - length
