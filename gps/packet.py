@@ -178,8 +178,10 @@ class Lexer(object):
             self.ibufptr = 0
         return None
 
-    def too_short(self, length):
-        raise TooShort
+    def too_short(self, need, have):
+        if need > have:
+            log(LOG_INF, "Buffer shorted only have %d of %d\n" % (have, need))
+            raise TooShort
 
     def bless_nmea_nosig(self, length, _):
         """Assume all cr/lf terminated "$STI.*" strings are NMEA."""
@@ -229,11 +231,9 @@ class Lexer(object):
 
     def bless_sirf(self, _length, scratch):
         """Validate SiRF packets."""
-        if 4 > _length:
-            return self.too_short(_length)
+        self.too_short(need=4, have=_length)
         length = polyunpack1("<H", scratch[2:4]) + 8
-        if length > _length:
-            return self.too_short(_length)
+        self.too_short(need=length, have=_length)
         frag = scratch[:length]
         csum = 0
         for char in frag[3:-4]:
@@ -264,11 +264,9 @@ class Lexer(object):
 
     def bless_ubx(self, _length, scratch, typed):
         """Validate u-blox/allystar packets."""
-        if 6 > _length:
-            return self.too_short(_length)
+        self.too_short(need=6, have=_length)
         length = polyunpack1("<H", scratch[4:6]) + 8
-        if length > _length:
-            return self.too_short(_length)
+        self.too_short(need=length, have=_length)
         frag = scratch[:length]
         a = b = 0
         for char in frag[2:-2]:
@@ -280,8 +278,7 @@ class Lexer(object):
 
     def accept_bless(self, length, typed):
         """Acccept/return packet and update the buffer."""
-        if length > len(self.ibuf):
-            raise TooShort
+        self.too_short(need=length, have=len(self.ibuf))
         self.sbufptr += (
             length + self.ibufptr
         )  # dang gpscat takes counter - length
@@ -297,11 +294,9 @@ class Lexer(object):
 
     def bless_skytraq(self, _length, scratch):
         """Validate skytaq packets."""
-        if 6 > _length:
-            return self.too_short(_length)
+        self.too_short(need=6, have=_length)
         length = polyunpack1("<H", scratch[2:4]) + 7
-        if length > _length:
-            return self.too_short(_length)
+        self.too_short(need=length, have=_length)
         subby = scratch[:length]
         cs = 0
         for char in subby[4:-3]:
