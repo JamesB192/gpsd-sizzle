@@ -76,10 +76,12 @@ def new():
 
 
 def polyunpack1(fmt, buffer):
-    return struct.unpack(fmt, misc.polybytes(buffer))[0]
+    """Unpack a value from a str using struct unpack and glue."""
+    return polyunpack(fmt, buffer)[0]
 
 
 def polyunpack(fmt, buffer):
+    """Unpack values from a str using struct unpack and glue."""
     return struct.unpack(fmt, misc.polybytes(buffer))
 
 
@@ -114,6 +116,7 @@ class Lexer(object):
     ]
 
     def __init__(self):
+        """Build a reset a class instance."""
         self.reset()
 
     def reset(self):
@@ -173,7 +176,7 @@ class Lexer(object):
         return None
 
     def bless_nmea_nosig(self, length, _):
-        """Assume all r"^$STI.*$[\r\n]+" are nmea."""
+        """Assume all cr/lf terminated "$STI.*" strings are NMEA."""
         return [length, NMEA_PACKET]
 
     def bless_garmintxt(self, length, _):
