@@ -35,6 +35,7 @@ _pkts = (
     "geostar nmea2000 greis sky allystar rtcm2 rtcm3 json"
 )
 
+READ_MAX = 128  # Max amount of data to pull in at once
 globby = {}
 idx = 0
 for key in _loglevels.split(" "):
@@ -136,7 +137,7 @@ class Lexer(object):
         """Get a packet from the file handle."""
         ret = None
         while ret is None:
-            red_buffer = os.read(file_handle, 128)
+            red_buffer = os.read(file_handle, READ_MAX)
             self.eof = bool(0 == len(red_buffer))
             self.ibuf += misc.polystr(red_buffer)
             ret = self.packet_parse()
