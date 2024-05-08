@@ -105,7 +105,7 @@ class Lexer(object):
         [r"\A(#.*[\r\n]+)", "comment"],
         [r"\A(\{[^\r\n]+)", "json"],
         [r"\A(\$.+\*..[\r\n]+)", "nmea", NMEA_PACKET],
-        [r"\A(\!.+\*..[\r\n]+)", "aivdm", AIVDM_PACKET],
+        [r"\A(\!.+\*..[\r\n]+)", "nmea", AIVDM_PACKET],
         [r"\A(\x01\xa1.*\x0d\x0a)", "skytraq"],
         [r"\A(\xa0\xa2.+\xb0\xb3)", "sirf"],
         # [r"\A([\x02\x04\x23].*\x03[\r\n]+)", "greis"],
