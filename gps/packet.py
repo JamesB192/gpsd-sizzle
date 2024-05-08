@@ -55,9 +55,14 @@ debug = LOG_WARN
 
 
 def prep(level, tokens):
-    """Print representation of tokens to stderr if logging heavy."""
-    if debug > level:
-        sys.stderr.write(repr(tokens) + "\r\n")
+    """Print representation of tokens using hook."""
+    log(level, repr(tokens) + "\r\n")
+
+
+def log(level, message):
+    """Log messagesd using hook."""
+    if callable(loghook):
+        loghook(level, message.rstrip("\r\n") + "\r\n")
 
 
 def register_report(reporter):
@@ -139,7 +144,13 @@ class Lexer(object):
         while ret is None:
             red_buffer = os.read(file_handle, READ_MAX)
             self.eof = bool(0 == len(red_buffer))
-            self.ibuf += misc.polystr(red_buffer)
+            red_buffer = misc.polystr(red_buffer)
+            log(
+                LOG_IO,
+                "Read %d octets"
+                % (len(red_buffer)),
+            )
+            self.ibuf += red_buffer
             ret = self.packet_parse()
             if self.eof and not self.ibuf:
                 return [0, INVALID_PACKET, b"", self.sbufptr]
@@ -147,7 +158,12 @@ class Lexer(object):
 
     def packet_parse(self):
         """Scan inside inbuf to find packet beginnings."""
-        for self.ibufptr in range(len(self.ibuf)):
+        lenny = len(self.ibuf)
+        log(
+            LOG_DATA,
+            "packet_parse have %d bytes" % (lenny),
+        )
+        for self.ibufptr in range(lenny):
             scratch = self.ibuf[self.ibufptr :]
             ret = self.next_state(scratch)
             if isinstance(ret, list):
@@ -163,17 +179,21 @@ class Lexer(object):
             try:
                 hook = getattr(self, "bless_" + row[1])
             except KeyError as e:
-                print("KeyError: " + repr(e), file=sys.stderr)
+                log(LOG_ERR, "KeyError: " + repr(e))
                 return None
             try:
                 mid = hook(len(pats.group(1)), scratch, *row[2:])
             except struct.error as e:
-                print("struct: " + repr(e), file=sys.stderr)
+                log(LOG_ERR, "struct: " + repr(e))
                 return None
             if mid is None:
                 continue
             return mid
         if self.eof:
+            log(
+                LOG_INF,
+                "Purging buffer of %d" % (len(self.ibuf)),
+            )
             self.sbufptr = 0
             self.ibuf = ""
             self.ibufptr = 0
@@ -181,7 +201,11 @@ class Lexer(object):
 
     def too_short(self, need, have):
         if need > have:
-            log(LOG_INF, "Buffer shorted only have %d of %d\n" % (have, need))
+            log(
+                LOG_INF,
+                "Buffer shorted only have %d of %d from %s\n"
+                % (have, need, sys._getframe().f_back.f_code.co_name),
+            )
             raise TooShort
 
     def bless_nmea_nosig(self, length, _):
@@ -280,16 +304,24 @@ class Lexer(object):
     def accept_bless(self, length, typed):
         """Acccept/return packet and update the buffer."""
         self.too_short(need=length, have=len(self.ibuf))
+        out = self.ibuf[self.ibufptr :][:length]
+        log(
+            LOG_IO,
+            "Accepting %d (%d@%d): %s"
+            % (typed, length, self.sbufptr, repr(out)),
+        )
         self.sbufptr += (
             length + self.ibufptr
         )  # dang gpscat takes counter - length
         ret = [
             length,
             typed,
-            misc.polybytes(self.ibuf[self.ibufptr :][:length]),
+            misc.polybytes(out),
             self.sbufptr,
         ]
+        log(LOG_DATA, "accept pre ibuf is %d Bytes" % len(self.ibuf))
         self.ibuf = self.ibuf[length + self.ibufptr :]
+        log(LOG_DATA, "accept post ibuf is %d Bytes" % len(self.ibuf))
         self.ibufptr = 0
         return ret
 
