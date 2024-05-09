@@ -162,7 +162,13 @@ class Lexer(object):
             )
             self.ibuf += red_buffer
             ret = self.packet_parse()
-            if self.eof and not self.ibuf:
+            if self.eof and ret is None:
+                log(
+                    LOG_INF,
+                    "Purging buffer of %d" % (len(self.ibuf)),
+                )
+                self.ibuf = ""
+                self.ibufptr = 0
                 return [0, INVALID_PACKET, b"", self.sbufptr]
         return ret
 
@@ -199,14 +205,6 @@ class Lexer(object):
             if mid is None:
                 continue
             return mid
-        if self.eof:
-            log(
-                LOG_INF,
-                "Purging buffer of %d" % (len(self.ibuf)),
-            )
-            self.sbufptr = 0
-            self.ibuf = ""
-            self.ibufptr = 0
         return None
 
     def too_short(self, need, have):
