@@ -91,6 +91,16 @@ def polyunpack(fmt, buffer):
     return struct.unpack(fmt, misc.polybytes(buffer))
 
 
+def hexdump(string):
+    lenny = len(string)
+    for start in range(0, lenny, 16):
+        log(
+            LOG_RAW2,
+            "%04x " % start
+            + " ".join(["%02x" % ord(x) for x in string[start:][:16]]),
+        )
+
+
 class TooShort(Exception):
     """Complain that a packet is not long enough."""
 
@@ -117,7 +127,7 @@ class Lexer(object):
         # [r"\A([\x02\x04\x23].*\x03[\r\n]+)", "greis"],
         # [r"\A(\x10.*\x10\x03)", "tsip"],
         [r"\A(\xff\x81.*)", "zodiac"],
-        [r"\A(\xb5b.*)", "ubx", UBX_PACKET],
+        [r"\A(\xb5b.{6,})", "ubx", UBX_PACKET],
         [r"\A(\xf1\xd9.*)", "ubx", ALLYSTAR_PACKET],
         [r"\A(\$STI,.+[\r\n]+)", "nmea_nosig"],
         [
@@ -287,8 +297,13 @@ class Lexer(object):
     def bless_tsip(self, length, _):
         return [length, TSIP_PACKET]
 
-    def bless_ubx(self, _length, scratch, typed):
+    def bless_ubx(self, _, scratch, typed):
         """Validate u-blox/allystar packets."""
+        _length = len(scratch)
+        log(
+            LOG_RAW2,
+            "scratch has %d bytes are %s" % (_length, hexdump(scratch)),
+        )
         self.too_short(need=6, have=_length)
         length = polyunpack1("<H", scratch[4:6]) + 8
         self.too_short(need=length, have=_length)
@@ -296,7 +311,7 @@ class Lexer(object):
         a = b = 0
         for char in frag[2:-2]:
             a = (a + ord(char)) & 0xFF
-            b = (b + a) & 0xFFB
+            b = (b + a) & 0xFF
         if frag[-2:] == "%c%c" % (a, b):
             return [length, typed]
         return None
