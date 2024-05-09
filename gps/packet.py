@@ -253,6 +253,8 @@ class Lexer(object):
             last = scratch.index("}", last + 1) + 1
             try:
                 _ = json.loads(scratch[:last])
+                while scratch[last + 1] in "\r\n":
+                    last += 1
                 return [last, JSON_PACKET]
             except json.JSONDecodeError:
                 pass
