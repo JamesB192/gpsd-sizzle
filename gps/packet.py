@@ -24,6 +24,7 @@ from __future__ import absolute_import, print_function
 import json
 import os
 import re
+import select
 import struct
 import sys
 from . import misc
@@ -101,7 +102,7 @@ def hexdump(string):
         )
 
 
-class TooShort(Exception):
+class TooShort(BaseException):
     """Complain that a packet is not long enough."""
 
     value = "truncated the packet"
@@ -152,24 +153,32 @@ class Lexer(object):
         """Get a packet from the file handle."""
         ret = None
         while ret is None:
-            red_buffer = os.read(file_handle, READ_MAX)
-            self.eof = bool(0 == len(red_buffer))
-            red_buffer = misc.polystr(red_buffer)
-            log(
-                LOG_IO,
-                "Read %d octets"
-                % (len(red_buffer)),
-            )
-            self.ibuf += red_buffer
-            ret = self.packet_parse()
-            if self.eof and ret is None:
+            try:
+                if not self.ibuf:
+                    raise TooShort
+                ret = self.packet_parse()
+                log(LOG_SHOUT, "ret: %s" % repr(ret))
+            except TooShort:
+                if self.eof and ret is None:
+                    log(
+                        LOG_INF,
+                        "Purging buffer of %d" % (len(self.ibuf)),
+                    )
+                    self.ibuf = ""
+                    self.ibufptr = 0
+                    raise EOFError
+                if file_handle not in select.select(
+                    [file_handle], [], []
+                )[0]:
+                    raise BlockingIOError
+                red_buffer = os.read(file_handle, READ_MAX)
+                self.eof = bool(0 == len(red_buffer))
+                red_buffer = misc.polystr(red_buffer)
                 log(
-                    LOG_INF,
-                    "Purging buffer of %d" % (len(self.ibuf)),
+                    LOG_IO,
+                    "Read %d octets" % (len(red_buffer)),
                 )
-                self.ibuf = ""
-                self.ibufptr = 0
-                return [0, INVALID_PACKET, b"", self.sbufptr]
+                self.ibuf += red_buffer
         return ret
 
     def packet_parse(self):
@@ -184,7 +193,7 @@ class Lexer(object):
             ret = self.next_state(scratch)
             if isinstance(ret, list):
                 return self.accept_bless(*ret)
-        return None
+        raise TooShort
 
     def next_state(self, scratch):
         """Find packet leading the buffer with regex."""
