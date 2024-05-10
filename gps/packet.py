@@ -251,7 +251,7 @@ class Lexer(object):
                 continue
             pointer = commento.index(check)
             if self.next_state(scratch[pointer:]):
-                return None
+                return [pointer, COMMENT_PACKET]
         return [length, COMMENT_PACKET]
         # return None
 
