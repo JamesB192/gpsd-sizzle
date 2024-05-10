@@ -59,5 +59,16 @@ setup(
         "Operating System :: POSIX",
         "Programming Language :: Python",
     ],
-    data_files=[("./gps", ["data/COPYING", "README.markdown", "data/gpsd-logo.png", "data/xgps.desktop", "data/xgpsspeed.desktop"])],
+    data_files=[
+        (
+            "./gps",
+            [
+                "data/COPYING",
+                "README.markdown",
+                "data/gpsd-logo.png",
+                "data/xgps.desktop",
+                "data/xgpsspeed.desktop",
+            ],
+        )
+    ],
 )
