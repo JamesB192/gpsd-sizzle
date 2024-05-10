@@ -18,15 +18,15 @@ long_description = (this_directory / "README.markdown").read_text()
 
 setup(
     name="gps-sizzle",
-    version="2024.5.5",
+    version="2024.5.10",
     description="a standalone fork of tools originally from GPSD",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="http://github.com/JamesB192/gpsd-sizzle.git",
     author="James Browning",
-    author_email="JamesB.fo80@gmail.com",
+    author_email="JamesB.fe80@gmail.com",
     maintainer="James Browning",
-    maintainer_email="JamesB.fo80@gmail.com",
+    maintainer_email="JamesB.fe80@gmail.com",
     license="BSD-2-Clause License",
     packages=["gps"],
     project_urls={
@@ -42,7 +42,8 @@ setup(
         "scripts/gpsfake",
         "scripts/gpsplot",
         "scripts/gpsprof",
-        "scripts/gpssim.py",
+        "scripts/gpsserialspim",
+        "scripts/gpssim",
         "scripts/gpssubframe",
         "scripts/ntpshmviz",
         "scripts/skyview2svg",
@@ -58,4 +59,5 @@ setup(
         "Operating System :: POSIX",
         "Programming Language :: Python",
     ],
+    data_files=[("./gps", ["data/COPYING", "README.markdown", "data/gpsd-logo.png", "data/xgps.desktop", "data/xgpsspeed.desktop"])],
 )

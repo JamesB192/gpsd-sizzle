@@ -53,7 +53,7 @@ except ImportError:
     )
     sys.exit(2)
 
-gps_version = "2024.5.5"
+gps_version = "2024.5.10"
 if gps.__version__ != gps_version:
     sys.stderr.write(
         "%s: ERROR: need gps module version %s, got %s\n"

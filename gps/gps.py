@@ -708,7 +708,7 @@ class gps(gpscommon, gpsdata, gpsjson):
     """
 
     # module version, would be nice to automate the version
-    __version__ = "2024.5.5"
+    __version__ = "2024.5.10"
 
     def __init__(
         self,

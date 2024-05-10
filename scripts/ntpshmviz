@@ -35,7 +35,7 @@ except ImportError:
     )
     sys.exit(1)
 
-gps_version = "2024.5.5"
+gps_version = "2024.5.10"
 ns_per_s = 1e9
 
 
