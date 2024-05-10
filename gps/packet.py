@@ -157,7 +157,6 @@ class Lexer(object):
                 if not self.ibuf:
                     raise TooShort
                 ret = self.packet_parse()
-                log(LOG_SHOUT, "ret: %s" % repr(ret))
             except TooShort:
                 if self.eof and ret is None:
                     log(
@@ -168,7 +167,7 @@ class Lexer(object):
                     self.ibufptr = 0
                     raise EOFError
                 if file_handle not in select.select(
-                    [file_handle], [], []
+                    [file_handle], [], [], 0
                 )[0]:
                     raise BlockingIOError
                 red_buffer = os.read(file_handle, READ_MAX)
@@ -251,7 +250,7 @@ class Lexer(object):
                 continue
             pointer = commento.index(check)
             if self.next_state(scratch[pointer:]):
-                return [pointer, COMMENT_PACKET]
+                return [pointer , COMMENT_PACKET]
         return [length, COMMENT_PACKET]
         # return None
 
