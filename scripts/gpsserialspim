@@ -1,0 +1,111 @@
+#! /usr/bin/env python
+"""Scan all serial devices /dev/tty*, checking for GPS data.
+
+Reports breakdown of sentences on reporting ports.
+Requires gps-sizzle fork, because of the multiple lexers.
+"""
+import curses
+import glob
+import os
+import sys
+import pyudev
+import gps.packet
+
+
+def dump_result(hook):
+    """Dump the results via hook function."""
+    global CROW
+    hits = []
+    for prow in filt_dev:
+        if 0 == prow[4]:
+            continue
+        for col in range(-2, gps.packet.MAX_GPSPACKET_TYPE):
+            if prow[3][col] > 0:
+                hits.append([prow[3][col], col])
+        if not hits:
+            continue
+        hook(
+            "\t".join(
+                ["%s(%d):" % (prow[0], prow[4])]
+                + [
+                    "%d has %d(%.1f%%)"
+                    % (tup[1], tup[0], tup[0] * 1e2 / prow[4])
+                    for tup in sorted(hits, key=lambda x: -x[0])
+                ]
+            )
+        )
+        CROW += 1
+
+
+curse = lambda strung: ctx.addstr(CROW, 0, strung)
+sprunt = lambda strung: print(strung)
+try:
+    files = glob.glob("/dev/tty*")
+    ctx = pyudev.Context()
+    filt_dev = []
+    fds = set()
+    for path in files:
+        dev = pyudev.Devices.from_device_file(ctx, path)
+        parent = dev.parent
+        if parent is None:
+            continue
+        if "serial" not in parent.properties["SUBSYSTEM"]:
+            continue
+        try:
+            fd = os.open(path, os.O_RDWR)
+            fds.add(fd)
+            lexer = gps.packet.new()
+            filt_dev.append(
+                [
+                    path,
+                    fd,
+                    lexer,
+                    [
+                        0
+                        for x in range(
+                            gps.packet.MAX_GPSPACKET_TYPE + 2
+                        )
+                    ],
+                    0,
+                ]
+            )
+        except OSError:
+            pass
+    ctx = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
+    while fds:
+        old = repr(fds)
+        for row in filt_dev:
+            fd = row[1]
+            if fd not in fds:
+                continue
+            lexer = row[2]
+            try:
+                size, bucket, _, total = lexer.get(fd)
+            except EOFError:
+                os.close(fd)
+                fds.remove(fd)
+            except BlockingIOError:
+                continue
+            row[3][bucket] += size
+            row[4] = total
+        reporting = {x[1] if x[4] > 0 else None for x in filt_dev}
+        reporting.remove(None)
+        ctx.clear()
+        ctx.addstr(0, 0, "previous fds: " + repr(old))
+        ctx.addstr(1, 0, "current fds:" + repr(fds))
+        ctx.addstr(2, 0, "fds reporting data: %s" % repr(reporting))
+        CROW = 3
+        dump_result(curse)
+        ctx.refresh()
+except KeyboardInterrupt:
+    curses.nocbreak()
+    ctx.keypad(False)
+    curses.echo()
+    curses.endwin()
+finally:
+    dump_result(sprunt)
+    for row in filt_dev:
+        if row[1] >= 0:
+            os.close(row[1])
